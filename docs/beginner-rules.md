@@ -1,6 +1,6 @@
 # Guandan: Beginner Rules and Product Specification
 
-This document records the rules currently specified for the game and the intended teaching experience. Items that are not precise enough to implement are listed in [NEEDS DECISION](#needs-decision). Do not infer an answer to those items.
+This document records the authoritative rules currently specified for the game and the intended teaching experience.
 
 ## 1. Game Overview
 
@@ -222,6 +222,8 @@ When a winning player must return a card after receiving Tribute, normally eligi
 
 J, Q, K, A, Small Joker, and Big Joker are not normally eligible. A Level Rank of J, Q, K, or A does not remove any rank from the normal 2-through-10 return range.
 
+**Important:** A printed rank 2 is a normal legal Return-Tribute card whenever 2 is not the Current Level Rank. Rank 2 is not fallback-only.
+
 Examples:
 
 - If the Current Level Rank is 6, ranks 2, 3, 4, 5, 7, 8, 9, and 10 may be returned; rank 6 may not.
@@ -229,7 +231,9 @@ Examples:
 - If the Current Level Rank is 2, ranks 3 through 10 may be returned; rank 2 may not.
 - If the Current Level Rank is Q, ranks 2 through 10 remain eligible.
 
-If no normally eligible Return-Tribute card exists, fallback is mandatory: return a Single of the lowest strength in the player's current hand using the general rank-strength order. If several physical cards tie at the lowest strength, the player may choose any tied card. Fallback overrides the normal printed-rank restrictions only when the normal eligible set is empty.
+Fallback applies only when the returning player has zero normally eligible Return-Tribute cards. Only then, the player must return a Single of the lowest strength in their current hand using the general rank-strength order. If several physical cards tie at the lowest strength, the player may choose any tied card. Fallback overrides the normal printed-rank restrictions only when the normal eligible set is empty.
+
+For fallback selection, the general rank-strength order from strongest to weakest is Big Joker, Small Joker, Current Level Rank, A, K, Q, J, 10, 9, 8, 7, 6, 5, 4, 3, and 2. If 2 is the Current Level Rank, it is promoted and removed from the bottom position. Therefore, when 2 is not the Current Level Rank, it is the weakest Single, but it remains normally eligible for Return Tribute and prevents fallback from applying when it is present in the returner's hand.
 
 The fallback guard is `normalEligibleReturnCards.length === 0`. The returner must use physical cards currently in their hand after receiving Tribute. The submitted card is identified by physical card ID.
 
@@ -319,11 +323,3 @@ Keep these concepts distinct in the eventual implementation:
 6. Wildcard interpretation
 
 For example, general card strength puts the Current Level Rank above 2, while sequence ordering puts `A-2-3-4-5` at the bottom and `10-J-Q-K-A` at the top. Do not create one universal rank number and reuse it for every rule.
-
-## NEEDS DECISION
-
-- Return fallback example conflict: the specification says fallback applies only when there are zero normal eligible cards, but also asks for a fallback-only hand containing a non-Level 2. Printed rank 2 is normally eligible whenever the Current Level Rank is not 2, so those conditions cannot both hold. The engine follows the explicit empty-eligible-set guard; the intended example/exception needs clarification.
-
-## Contradictions
-
-The Return fallback test example conflicts with the normal eligibility rule as described in [NEEDS DECISION](#needs-decision). The engine follows the explicit rule that fallback is available only when the normal eligible set is empty; no additional exception for 2 is assumed.
