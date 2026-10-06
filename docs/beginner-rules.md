@@ -278,6 +278,18 @@ All successful exchanges move the actual selected physical card object, preservi
 
 For the first round only, after the deck is shuffled, one physical card among the 108 cards is randomly designated as the revealed starting card. Cards are then dealt normally. The player who receives the designated card leads the first trick. The card remains in that player's hand and is not removed from play. The UI may visually reveal or highlight the card during the dealing sequence.
 
+### Match Lifecycle Orchestration
+
+The pure match orchestrator connects dealing, round play, progression, and pre-round exchange without duplicating their rules. Its lifecycle states are `ROUND_IN_PROGRESS`, `AWAITING_NEXT_ROUND_DECK`, `PRE_ROUND_EXCHANGE`, and `MATCH_COMPLETE`.
+
+The caller supplies each already-shuffled 108-card physical deck. For the first round, the caller also supplies the revealed physical card ID. The orchestrator validates the complete two-deck composition, deals through the deck helper, finds the revealed card's holder by physical ID, preserves that ID as informational match metadata, and creates the first `RoundState` using `MatchState.currentLevelRank`. The first round never runs Tribute or Anti-Tribute.
+
+While a round is active, match actions delegate directly to the round engine. When the round engine produces a completed `RoundOutcome`, the orchestrator immediately passes it to match progression. A completed match transitions directly to `MATCH_COMPLETE`. Otherwise, the orchestrator waits for the caller to supply the next shuffled deck; it does not create the pre-round exchange before that deck arrives.
+
+After a later-round deck is supplied and dealt, the orchestrator initializes the pre-round exchange with the previous `RoundOutcome`, the newly dealt hands, and the updated `MatchState.currentLevelRank`. If Anti-Tribute completes that exchange immediately, the orchestrator creates the next `RoundState` without exposing an unnecessary interactive exchange phase. Otherwise, it delegates explicit Tribute, Return-Tribute, equal-card recipient, and equal-card leader actions to the pre-round state machine until completion.
+
+The round number begins at 1 and increments only when a completed pre-round exchange creates the next active `RoundState`; it does not increment while waiting for a deck or during an exchange. All randomness remains outside the orchestrator, including deck order, the first-round revealed card, and both equal-Tribute resolutions. The orchestrator does not call `Math.random()` or silently resolve a tie.
+
 ## 14. Beginner Experience and Contextual Teaching
 
 A new player should be able to learn through the interface without requiring the developer to explain the rules personally. Do not achieve this by removing Guandan's defining combinations or strategic choices. Players should not have to read a long rulebook before entering a room; teach relevant rules in context during play.
