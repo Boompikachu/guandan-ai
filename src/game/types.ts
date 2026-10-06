@@ -40,6 +40,20 @@ export type JokerCard = {
 
 export type Card = SuitedCard | JokerCard;
 
+export type InterpretedCardView =
+  | {
+      physicalCard: SuitedCard;
+      kind: "SUITED";
+      rank: OrdinaryRank;
+      suit: Suit;
+    }
+  | {
+      physicalCard: JokerCard;
+      kind: "JOKER";
+      rank: JokerRank;
+      suit: null;
+    };
+
 export const SEATS = [0, 1, 2, 3] as const;
 export type Seat = (typeof SEATS)[number];
 export type TeamId = "A" | "B";
