@@ -1,0 +1,144 @@
+.area {
+  position: relative;
+  display: grid;
+  min-height: 14rem;
+  place-items: center;
+  padding: 1.2rem;
+  border: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgb(4 62 49 / 72%), rgb(0 35 29 / 18%) 63%, transparent 64%);
+  box-shadow: none;
+  text-align: center;
+}
+
+.area::before,
+.area::after {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(229 188 107 / 42%);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.area::after {
+  inset: 0.55rem;
+  border-color: rgb(229 188 107 / 8%);
+  box-shadow: 0 0 2.5rem rgb(229 188 107 / 6%);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 34rem);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  color: #dfc27e;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.heading::before,
+.heading::after {
+  width: clamp(1.5rem, 5vw, 4.5rem);
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgb(229 188 107 / 65%));
+}
+
+.heading::after {
+  background: linear-gradient(90deg, rgb(229 188 107 / 65%), transparent);
+}
+
+.combination {
+  margin: 0.45rem 0 0;
+  color: #f4ead8;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.lead {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid rgb(229 188 107 / 20%);
+  border-radius: 99rem;
+  color: #aaaba1;
+  background: rgb(0 0 0 / 16%);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.cards {
+  display: flex;
+  min-height: 6.2rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.7rem;
+  overflow-x: auto;
+  padding: 0.4rem;
+}
+
+.cards > :global(.playing-card) + :global(.playing-card) {
+  margin-left: -0.9rem;
+}
+
+.area :global(.playing-card:disabled) {
+  opacity: 1;
+}
+
+.notes {
+  margin-top: 0.45rem;
+  color: #d7bd82;
+  font-size: 0.67rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin-top: 1rem;
+  color: #889b96;
+}
+
+.empty strong {
+  display: block;
+  color: #ede4d2;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.empty p {
+  margin: 0.25rem 0 0;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 760px) {
+  .area {
+    min-height: 12.2rem;
+    padding: 0.7rem;
+  }
+
+  .heading {
+    font-size: 0.88rem;
+  }
+
+  .combination {
+    font-size: 1rem;
+  }
+
+  .cards {
+    min-height: 5rem;
+    margin-top: 0.35rem;
+  }
+
+  .cards > :global(.playing-card) + :global(.playing-card) {
+    margin-left: -1.15rem;
+  }
+}

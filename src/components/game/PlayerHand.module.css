@@ -1,0 +1,70 @@
+.zone {
+  min-width: 0;
+  padding: 0.65rem 0.8rem 0.45rem;
+  border: 1px solid rgb(229 188 107 / 20%);
+  border-radius: 1.3rem;
+  background: linear-gradient(180deg, rgb(2 23 20 / 78%), rgb(1 14 13 / 92%));
+  box-shadow: inset 0 1px rgb(255 255 255 / 3%), 0 1rem 2.5rem rgb(0 0 0 / 30%);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.current {
+  border-color: rgb(229 188 107 / 52%);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 4%),
+    0 0 0 2px rgb(229 188 107 / 7%),
+    0 0 2.2rem rgb(229 188 107 / 10%),
+    0 1rem 2.5rem rgb(0 0 0 / 30%);
+}
+
+.scroll {
+  display: flex;
+  min-height: 7.35rem;
+  align-items: flex-end;
+  max-width: 100%;
+  padding: 1.15rem 0.45rem 0.4rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: rgb(229 188 107 / 55%) rgb(0 0 0 / 22%);
+  scrollbar-width: thin;
+}
+
+.scroll > :global(.playing-card) + :global(.playing-card) {
+  margin-inline-start: clamp(-2.4rem, -2.2vw, -1.3rem);
+}
+
+.scroll > :global(.playing-card--selected) {
+  z-index: 60;
+}
+
+.empty {
+  display: flex;
+  height: 5rem;
+  align-items: center;
+  color: #93a39f;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+@media (max-width: 1100px) {
+  .scroll > :global(.playing-card) + :global(.playing-card) {
+    margin-inline-start: -2.1rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .zone {
+    padding: 0.5rem 0.45rem 0.3rem;
+    border-radius: 1rem;
+  }
+
+  .scroll {
+    min-height: 6.15rem;
+    padding: 0.95rem 0.2rem 0.25rem;
+  }
+
+  .scroll > :global(.playing-card) + :global(.playing-card) {
+    margin-inline-start: -1.2rem;
+  }
+}

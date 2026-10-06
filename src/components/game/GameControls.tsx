@@ -1,3 +1,5 @@
+import styles from "./GameControls.module.css";
+
 type InterpretationChoice = {
   key: string;
   label: string;
@@ -36,28 +38,24 @@ export function GameControls({
   onClear,
 }: GameControlsProps) {
   return (
-    <section className="control-panel" aria-label="Game controls">
-      <div className="min-w-0 flex-1">
-        <span className="section-kicker">What can I do?</span>
-        <p className="mt-1 text-sm font-semibold text-white/80">{prompt}</p>
-        <p className={`selection-feedback selection-feedback--${selectionTone}`} aria-live="polite">
+    <section className={`control-panel ${styles.panel}`} aria-label="Game controls">
+      <div className={styles.promptBlock}>
+        <span className={styles.turnLabel}>Your Turn</span>
+        <p className={styles.prompt}>{prompt}</p>
+        <p className={`${styles.feedback} ${styles[selectionTone]}`} aria-live="polite">
           {selectionMessage}
         </p>
         {errorMessage ? (
-          <p className="mt-2 rounded-xl border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm font-semibold text-rose-100" role="alert">
-            {errorMessage}
-          </p>
+          <p className={styles.error} role="alert">{errorMessage}</p>
         ) : null}
       </div>
 
       {interpretations.length > 1 ? (
-        <fieldset className="interpretation-picker">
-          <legend className="text-xs font-black uppercase tracking-[0.16em] text-amber-200">
-            Choose wildcard meaning
-          </legend>
-          <div className="mt-2 grid gap-2">
+        <fieldset className={styles.picker}>
+          <legend>Choose wildcard meaning</legend>
+          <div className={styles.choices}>
             {interpretations.map((choice) => (
-              <label key={choice.key} className="interpretation-option">
+              <label key={choice.key} className={styles.option}>
                 <input
                   type="radio"
                   name="interpretation"
@@ -77,18 +75,9 @@ export function GameControls({
         </fieldset>
       ) : null}
 
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <div className={styles.actions}>
         <button
           type="button"
-          className="button button--ghost"
-          disabled={selectedCount === 0}
-          onClick={onClear}
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          className="button button--secondary"
           disabled={!canPass}
           onClick={onPass}
         >
@@ -96,7 +85,14 @@ export function GameControls({
         </button>
         <button
           type="button"
-          className="button button--primary"
+          disabled={selectedCount === 0}
+          onClick={onClear}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          className={styles.play}
           disabled={!canPlay}
           onClick={onPlay}
         >

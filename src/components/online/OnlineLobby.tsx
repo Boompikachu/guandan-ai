@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { Seat } from "../../game/types";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
 import type { ClientLobbyView } from "../../shared/multiplayer-protocol";
 import { ConnectionBadge } from "./ConnectionBadge";
+import styles from "./OnlineLobby.module.css";
+import { UiIcon } from "./UiIcon";
 
 type OnlineLobbyProps = {
   view: ClientLobbyView;
@@ -12,6 +15,11 @@ type OnlineLobbyProps = {
   onSetReady: (ready: boolean) => Promise<boolean>;
   onStart: () => Promise<boolean>;
 };
+
+function visualPosition(seat: Seat, selfSeat: Seat): "bottom" | "right" | "top" | "left" {
+  const offset = (seat - selfSeat + 4) % 4;
+  return (["bottom", "right", "top", "left"] as const)[offset] ?? "bottom";
+}
 
 export function OnlineLobby({
   view,
@@ -31,81 +39,121 @@ export function OnlineLobby({
   }
 
   return (
-    <main className="lobby-shell">
-      <header className="lobby-header">
-        <div>
-          <p className="section-kicker">Live room</p>
-          <h1>Gather your table</h1>
+    <main className={styles.page}>
+      <header className={styles.topBar}>
+        <div className={styles.brand}>
+          <span className={styles.brandMark} aria-hidden="true">掼</span>
+          <div>
+            <h1>Guandan Go</h1>
+            <span>Private table lobby</span>
+          </div>
         </div>
-        <ConnectionBadge status={connectionStatus} />
+        <div className={styles.roomBar}>
+          <div className={styles.roomCode} aria-label={`Room code ${view.roomCode}`}>
+            <span>Room</span>
+            <strong>{view.roomCode}</strong>
+          </div>
+          <button type="button" className={styles.copyButton} onClick={copyCode}>
+            <UiIcon name={copied ? "check" : "copy"} />
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <ConnectionBadge status={connectionStatus} />
+        </div>
       </header>
 
-      <section className="room-code-panel" aria-label="Room code">
-        <div>
-          <span>Room code</span>
-          <strong>{view.roomCode}</strong>
-        </div>
-        <button type="button" className="button button--secondary" onClick={copyCode}>
-          {copied ? "Copied" : "Copy Code"}
-        </button>
-      </section>
+      <div className={styles.main}>
+        <section className={styles.intro}>
+          <span>The table is being prepared</span>
+          <h2>Gather your players</h2>
+          <p>Partners sit opposite each other. All four players must be ready to begin.</p>
+        </section>
 
-      <section className="lobby-seats" aria-label="Players">
-        {view.players.map((player, seat) => (
-          <article
-            key={seat}
-            className={`lobby-seat lobby-seat--team-${seat % 2 === 0 ? "a" : "b"}`}
-          >
-            <div className="lobby-seat__number">Player {seat + 1}</div>
-            {player ? (
-              <>
-                <h2>{player.name}{player.seat === view.self.seat ? " (You)" : ""}</h2>
-                <p>Team {player.team}{player.isHost ? " · Host" : ""}</p>
-                <div className="lobby-seat__states">
-                  <span className={player.connected ? "is-positive" : "is-negative"}>
-                    {player.connected ? "Connected" : "Disconnected"}
-                  </span>
-                  <span className={player.ready ? "is-positive" : "is-muted"}>
-                    {player.ready ? "Ready" : "Not Ready"}
-                  </span>
+        <section className={styles.tableFrame} aria-label="Players around the table">
+          <div className={styles.table}>
+            {view.players.map((player, seat) => {
+              const position = visualPosition(seat as Seat, view.self.seat);
+              const isSelf = seat === view.self.seat;
+              const seatClass = styles[`seat${position[0].toUpperCase()}${position.slice(1)}`];
+
+              return (
+                <article
+                  key={seat}
+                  className={[
+                    styles.seat,
+                    seatClass,
+                    isSelf ? styles.seatSelf : "",
+                    player?.ready ? styles.seatReady : "",
+                    player?.connected ? styles.connected : "",
+                    !player ? styles.empty : "",
+                  ].filter(Boolean).join(" ")}
+                >
+                  <span className={styles.avatar} aria-hidden="true"><UiIcon name="user" /></span>
+                  <div className={styles.identity}>
+                    {player ? (
+                      <>
+                        <strong>{player.name}{isSelf ? " · You" : ""}</strong>
+                        <span>Team {player.team}{isSelf ? " · Your seat" : ""}</span>
+                        <div className={styles.badges}>
+                          {player.isHost ? <span className={`${styles.badge} ${styles.badgeGold}`}>Host</span> : null}
+                          <span className={`${styles.badge} ${player.ready ? styles.badgeReady : ""}`}>
+                            {player.ready ? "Ready" : "Not ready"}
+                          </span>
+                          {!player.connected ? (
+                            <span className={`${styles.badge} ${styles.badgeDanger}`}>Disconnected</span>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong>Waiting for player</strong>
+                        <span>Invite a friend with the room code</span>
+                      </>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+
+            <div className={styles.center} aria-hidden="true">
+              <div className={styles.centerMark}>
+                <div>
+                  <span>掼蛋</span>
+                  <small>Partners · Strategy · Victory</small>
                 </div>
-              </>
-            ) : (
-              <div className="lobby-seat__empty">Waiting for a friend…</div>
-            )}
-          </article>
-        ))}
-      </section>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {errorMessage ? <p className="online-error" role="alert">{errorMessage}</p> : null}
+        {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
 
-      <section className="lobby-actions">
-        <div>
-          <strong>{self?.ready ? "You are ready." : "Ready to play?"}</strong>
-          <p>All four players must be connected and ready before the host can start.</p>
-        </div>
-        <div className="lobby-actions__buttons">
-          <button
-            type="button"
-            className={self?.ready ? "button button--secondary" : "button button--primary"}
-            disabled={connectionStatus !== "CONNECTED"}
-            onClick={() => void onSetReady(!self?.ready)}
-          >
-            {self?.ready ? "Not Ready" : "Ready"}
-          </button>
-          {view.self.isHost ? (
+        <section className={styles.actions}>
+          <div>
+            <strong>{self?.ready ? "You are ready." : "Take your seat when ready."}</strong>
+            <p>The host can begin once everyone is connected and ready.</p>
+          </div>
+          <div className={styles.actionButtons}>
             <button
               type="button"
-              className="button button--primary"
-              disabled={!view.canStart || connectionStatus !== "CONNECTED"}
-              onClick={() => void onStart()}
+              className={self?.ready ? styles.secondaryButton : styles.primaryButton}
+              disabled={connectionStatus !== "CONNECTED"}
+              onClick={() => void onSetReady(!self?.ready)}
             >
-              Start Game
+              {self?.ready ? "Not Ready" : "Ready"}
             </button>
-          ) : null}
-        </div>
-      </section>
+            {view.self.isHost ? (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                disabled={!view.canStart || connectionStatus !== "CONNECTED"}
+                onClick={() => void onStart()}
+              >
+                Start Game
+              </button>
+            ) : null}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
-

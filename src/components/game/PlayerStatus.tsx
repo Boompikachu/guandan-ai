@@ -1,9 +1,11 @@
 import { getTeamForSeat } from "../../game/teams";
 import type { Seat } from "../../game/types";
 import { playerLabel } from "../../lib/game-ui";
+import styles from "./PlayerStatus.module.css";
 
 type PlayerStatusProps = {
   seat: Seat;
+  displayName?: string;
   cardCount: number;
   isCurrent: boolean;
   finishPosition: number | null;
@@ -18,6 +20,7 @@ function ordinal(position: number): string {
 
 export function PlayerStatus({
   seat,
+  displayName,
   cardCount,
   isCurrent,
   finishPosition,
@@ -25,25 +28,22 @@ export function PlayerStatus({
   const team = getTeamForSeat(seat);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <div>
-        <p className="text-sm font-black tracking-wide text-white">
-          {playerLabel(seat)}
-        </p>
-        <p className={`text-xs font-semibold ${team === "A" ? "text-emerald-300" : "text-amber-300"}`}>
-          Team {team}
-        </p>
+    <div className={styles.status}>
+      <span className={styles.avatar} aria-hidden="true">P{seat + 1}</span>
+      <div className={styles.identity}>
+        <strong>{displayName ?? playerLabel(seat)}</strong>
+        <span className={team === "A" ? styles.teamA : styles.teamB}>Team {team}</span>
       </div>
-      <span className="rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-xs text-white/75">
+      <span className={styles.count}>
         {cardCount} {cardCount === 1 ? "card" : "cards"}
       </span>
       {finishPosition !== null ? (
-        <span className="rounded-full bg-sky-300 px-2.5 py-1 text-xs font-black text-slate-950">
+        <span className={styles.finished}>
           Finished · {ordinal(finishPosition)}
         </span>
       ) : null}
       {isCurrent ? (
-        <span className="turn-pill" aria-label="Current turn">
+        <span className={styles.turn} aria-label="Current turn">
           Your turn
         </span>
       ) : null}

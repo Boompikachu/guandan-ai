@@ -4,6 +4,7 @@ import {
   cardAccessibleLabel,
   rankLabel,
 } from "../../lib/game-ui";
+import styles from "./Card.module.css";
 
 type CardProps = {
   card: GameCard;
@@ -37,10 +38,16 @@ export function Card({
       type="button"
       className={[
         "playing-card",
+        styles.card,
         compact ? "playing-card--compact" : "",
+        compact ? styles.compact : "",
         selected ? "playing-card--selected" : "",
+        selected ? styles.selected : "",
         wildcard ? "playing-card--wildcard" : "",
+        wildcard ? styles.wildcard : "",
         revealed ? "playing-card--revealed" : "",
+        revealed ? styles.revealed : "",
+        onClick && !disabled ? styles.interactive : "",
       ].filter(Boolean).join(" ")}
       aria-label={`${cardAccessibleLabel(card, currentLevelRank)}${selected ? ", selected" : ""}`}
       aria-pressed={onClick ? selected : undefined}
@@ -49,27 +56,27 @@ export function Card({
     >
       {card.kind === "JOKER" ? (
         <>
-          <span className="playing-card__joker-mark">
+          <span className={styles.jokerMark}>
             {card.rank === "BIG_JOKER" ? "★" : "☆"}
           </span>
-          <span className="playing-card__joker-name">
+          <span className={styles.jokerName}>
             {rankLabel(card.rank)}
           </span>
         </>
       ) : (
         <>
-          <span className={redSuit ? "playing-card__rank text-red-600" : "playing-card__rank"}>
+          <span className={`${styles.rank} ${redSuit ? styles.red : ""}`}>
             {card.rank}
           </span>
-          <span className={redSuit ? "playing-card__suit text-red-600" : "playing-card__suit"}>
+          <span className={`${styles.suit} ${redSuit ? styles.red : ""}`}>
             {SUIT_SYMBOLS[card.suit]}
           </span>
         </>
       )}
-      <span className="playing-card__deck">{card.deckIndex + 1}</span>
-      {wildcard ? <span className="playing-card__badge">Wildcard</span> : null}
-      {revealed ? <span className="playing-card__reveal">Reveal</span> : null}
-      {selected ? <span className="playing-card__selected-mark">✓</span> : null}
+      <span className={styles.deck}>{card.deckIndex + 1}</span>
+      {wildcard ? <span className={styles.badge}>Level</span> : null}
+      {revealed ? <span className={styles.reveal}>Reveal</span> : null}
+      {selected ? <span className={styles.selectedMark}>✓</span> : null}
     </button>
   );
 }

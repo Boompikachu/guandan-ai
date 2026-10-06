@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 :root {
+  --ink-black: #050a0c;
+  --lacquer-black: #091114;
+  --felt-deep: #003b31;
+  --felt-light: #075b49;
+  --antique-gold: #b98a43;
+  --warm-gold: #e5bc6b;
+  --ivory: #f3ead7;
+  --cinnabar: #a83b32;
+  --font-display: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
   --background: #071d18;
   --foreground: #f8f2df;
   --felt: #0b4b39;
@@ -33,7 +42,8 @@ body {
   background:
     radial-gradient(circle at 50% 10%, rgb(30 105 76 / 45%), transparent 34rem),
     linear-gradient(145deg, #061712, #092b22 58%, #04130f);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
 button,
@@ -43,6 +53,14 @@ input {
 
 button {
   -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid #f4d58c;
+  outline-offset: 3px;
 }
 
 .section-kicker {

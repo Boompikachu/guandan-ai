@@ -2,9 +2,11 @@ import type { Card as GameCard, LevelRank, Seat } from "../../game/types";
 import { sortCardsForDisplay } from "../../lib/game-ui";
 import { Card } from "./Card";
 import { PlayerStatus } from "./PlayerStatus";
+import styles from "./PlayerHand.module.css";
 
 type PlayerHandProps = {
   seat: Seat;
+  displayName?: string;
   cards: readonly GameCard[];
   currentLevelRank: LevelRank;
   isCurrent: boolean;
@@ -12,11 +14,13 @@ type PlayerHandProps = {
   selectedCardIds?: ReadonlySet<string>;
   interactiveCardIds?: ReadonlySet<string>;
   revealedCardId?: string;
+  fullSizeCards?: boolean;
   onToggleCard?: (cardId: string) => void;
 };
 
 export function PlayerHand({
   seat,
+  displayName,
   cards,
   currentLevelRank,
   isCurrent,
@@ -24,6 +28,7 @@ export function PlayerHand({
   selectedCardIds = new Set<string>(),
   interactiveCardIds,
   revealedCardId,
+  fullSizeCards = false,
   onToggleCard,
 }: PlayerHandProps) {
   const sortedCards = sortCardsForDisplay(cards);
@@ -31,18 +36,25 @@ export function PlayerHand({
 
   return (
     <section
-      className={`player-zone team-${seat % 2 === 0 ? "a" : "b"} ${isCurrent ? "player-zone--current" : ""}`}
+      className={[
+        "player-zone",
+        `team-${seat % 2 === 0 ? "a" : "b"}`,
+        styles.zone,
+        isCurrent ? "player-zone--current" : "",
+        isCurrent ? styles.current : "",
+      ].filter(Boolean).join(" ")}
       aria-label={`Player ${seat + 1} hand`}
     >
       <PlayerStatus
         seat={seat}
+        displayName={displayName}
         cardCount={cards.length}
         isCurrent={isCurrent}
         finishPosition={finishPosition}
       />
-      <div className="hand-scroll" role="group" aria-label={`Player ${seat + 1} cards`}>
+      <div className={`hand-scroll ${styles.scroll}`} role="group" aria-label={`Player ${seat + 1} cards`}>
         {sortedCards.length === 0 ? (
-          <div className="flex h-20 items-center text-sm font-semibold text-white/55">
+          <div className={styles.empty}>
             No cards remaining
           </div>
         ) : sortedCards.map((card) => {
@@ -54,7 +66,7 @@ export function PlayerHand({
               currentLevelRank={currentLevelRank}
               selected={selectedCardIds.has(card.id)}
               disabled={!enabled}
-              compact={!isCurrent}
+              compact={!isCurrent && !fullSizeCards}
               revealed={card.id === revealedCardId}
               onClick={enabled ? () => onToggleCard?.(card.id) : undefined}
             />

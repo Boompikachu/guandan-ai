@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Guandan Go",
-  description: "A local four-player Guandan hot-seat prototype.",
+  description: "A private online table for the classic partnership game of Guandan.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
