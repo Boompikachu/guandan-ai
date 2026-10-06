@@ -100,6 +100,11 @@ export type PreRoundActionResult =
   | { success: true; state: PreRoundExchangeState }
   | { success: false; state: PreRoundExchangeState; error: PreRoundActionError };
 
+export type ReturnCardOptions = {
+  mode: "NORMAL" | "FALLBACK";
+  cards: readonly Card[];
+};
+
 const NORMAL_RETURN_RANKS: readonly OrdinaryRank[] = [
   "2",
   "3",
@@ -365,6 +370,51 @@ function getWeakestCards(
     (card) =>
       compareGeneralRanks(card.rank, weakest.rank, currentLevelRank) === 0,
   );
+}
+
+/** Return the physical cards currently accepted for a payer's Tribute action. */
+export function getTributeCardOptions(
+  state: PreRoundExchangeState,
+  seat: Seat,
+): readonly Card[] {
+  if (
+    state.phase !== "AWAITING_TRIBUTE" ||
+    !state.tributePayers.includes(seat) ||
+    state.tributeSelections.some((selection) => selection.payer === seat)
+  ) {
+    return [];
+  }
+
+  return highestEligibleTributeCards(
+    state.hands[seat],
+    state.currentLevelRank,
+  );
+}
+
+/** Describe the normal or fallback physical cards accepted for Return Tribute. */
+export function getReturnCardOptions(
+  state: PreRoundExchangeState,
+  seat: Seat,
+): ReturnCardOptions | null {
+  if (
+    state.phase !== "AWAITING_RETURN" ||
+    !state.returnTasks.some((task) => task.returningSeat === seat)
+  ) {
+    return null;
+  }
+
+  const normalCards = getReturnEligibleCards(
+    state.hands[seat],
+    state.currentLevelRank,
+  );
+  if (normalCards.length > 0) {
+    return { mode: "NORMAL", cards: normalCards };
+  }
+
+  return {
+    mode: "FALLBACK",
+    cards: getWeakestCards(state.hands[seat], state.currentLevelRank),
+  };
 }
 
 function beginReturnPhase(
