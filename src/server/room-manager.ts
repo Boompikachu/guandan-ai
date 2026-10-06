@@ -23,6 +23,7 @@ const MAX_DISPLAY_NAME_LENGTH = 20;
 const MAX_ROOM_CODE_ATTEMPTS = 100;
 const MAX_AUTOMATIC_STEPS = 12;
 const MAX_EVENTS = 5;
+export const ABANDONED_ROOM_TTL_MS = 24 * 60 * 60 * 1000;
 
 type ConnectionSession = {
   roomCode: string;
@@ -130,6 +131,7 @@ export class RoomManager {
   constructor(
     private readonly random: ServerRandomSource = secureServerRandom,
     initialRooms: Iterable<readonly [string, RoomRecord]> = [],
+    private readonly now: () => number = Date.now,
   ) {
     this.rooms = new Map(initialRooms);
     for (const room of this.rooms.values()) {
@@ -162,6 +164,7 @@ export class RoomManager {
     if (!code) return failure("SERVER_ERROR", "A unique room code could not be generated.");
 
     const player = this.createPlayer(0, name, connectionId);
+    const now = this.now();
     const room: RoomRecord = {
       code,
       hostPlayerId: player.id,
@@ -170,7 +173,8 @@ export class RoomManager {
       match: null,
       revision: 1,
       events: [`${name} created the room.`],
-      createdAt: Date.now(),
+      createdAt: now,
+      lastActivityAt: now,
     };
     this.rooms.set(code, room);
     this.connections.set(connectionId, {
@@ -197,6 +201,7 @@ export class RoomManager {
 
     const player = this.createPlayer(seat, name, connectionId);
     room.players[seat] = player;
+    this.touchRoom(room);
     room.revision += 1;
     addEvents(room, [`${name} joined as Player ${seat + 1}.`]);
     this.connections.set(connectionId, {
@@ -220,6 +225,7 @@ export class RoomManager {
     const wasDisconnected = player.connectionIds.size === 0;
     player.connectionIds.add(connectionId);
     this.connections.set(connectionId, { roomCode: code, reconnectToken });
+    this.touchRoom(room);
     if (wasDisconnected) {
       room.revision += 1;
       addEvents(room, [`${player.name} reconnected.`]);
@@ -237,6 +243,7 @@ export class RoomManager {
     if (!player) return null;
 
     player.connectionIds.delete(connectionId);
+    this.touchRoom(room);
     if (player.connectionIds.size === 0) {
       room.revision += 1;
       addEvents(room, [`${player.name} disconnected.`]);
@@ -253,6 +260,7 @@ export class RoomManager {
     }
     if (player.ready !== ready) {
       player.ready = ready;
+      this.touchRoom(room);
       room.revision += 1;
       addEvents(room, [`${player.name} is ${ready ? "ready" : "not ready"}.`]);
     }
@@ -290,6 +298,7 @@ export class RoomManager {
 
     room.match = created.state;
     room.status = "ACTIVE";
+    this.touchRoom(room);
     room.revision += 1;
     const leader = created.state.roundState.currentTurn;
     addEvents(room, [
@@ -360,6 +369,7 @@ export class RoomManager {
     if (advanced.changed) {
       room.match = advanced.state;
       room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
+      this.touchRoom(room);
       room.revision += 1;
       addEvents(room, advanced.events);
     }
@@ -384,6 +394,26 @@ export class RoomManager {
     return this.connections.get(connectionId) ?? null;
   }
 
+  cleanupAbandonedRooms(maxIdleMs = ABANDONED_ROOM_TTL_MS): number {
+    const cutoff = this.now() - maxIdleMs;
+    let removed = 0;
+
+    for (const [code, room] of this.rooms) {
+      const hasConnectedPlayer = room.players.some(
+        (player) => player !== null && player.connectionIds.size > 0,
+      );
+      if (hasConnectedPlayer || room.lastActivityAt > cutoff) continue;
+
+      this.rooms.delete(code);
+      for (const [connectionId, session] of this.connections) {
+        if (session.roomCode === code) this.connections.delete(connectionId);
+      }
+      removed += 1;
+    }
+
+    return removed;
+  }
+
   private createPlayer(seat: Seat, name: string, connectionId: string): RoomPlayer {
     return {
       id: this.random.generatePlayerToken(),
@@ -393,6 +423,10 @@ export class RoomManager {
       ready: false,
       connectionIds: new Set([connectionId]),
     };
+  }
+
+  private touchRoom(room: RoomRecord): void {
+    room.lastActivityAt = this.now();
   }
 
   private sessionSuccess(room: RoomRecord, player: RoomPlayer): SessionAck {
@@ -441,6 +475,7 @@ export class RoomManager {
 
     room.match = advanced.state;
     room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
+    this.touchRoom(room);
     room.revision += 1;
     addEvents(room, [...advanced.events, ...events]);
     return { success: true, revision: room.revision };

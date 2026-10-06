@@ -85,6 +85,7 @@ function roomWithMatch(match: AwaitingNextRoundDeckMatchEngineState): RoomRecord
     revision: 10,
     events: [],
     createdAt: 1,
+    lastActivityAt: 1,
   };
 }
 
@@ -319,6 +320,49 @@ describe("RoomManager authoritative play and personalized views", () => {
       success: false,
       error: { code: "INVALID_SESSION" },
     });
+  });
+});
+
+describe("RoomManager abandoned-room cleanup", () => {
+  it("removes only fully disconnected rooms after the idle threshold", () => {
+    let now = 1_000;
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234", "DEF567"] }),
+      [],
+      () => now,
+    );
+    const abandoned = successfulSession(manager.createRoom("Alice", "socket-a"));
+    const connected = successfulSession(manager.createRoom("Bob", "socket-b"));
+    manager.disconnectConnection("socket-a");
+
+    now += 59_999;
+    expect(manager.cleanupAbandonedRooms(60_000)).toBe(0);
+    expect(manager.getRoom(abandoned.roomCode)).not.toBeNull();
+
+    now += 1;
+    expect(manager.cleanupAbandonedRooms(60_000)).toBe(1);
+    expect(manager.getRoom(abandoned.roomCode)).toBeNull();
+    expect(manager.getRoom(connected.roomCode)).not.toBeNull();
+  });
+
+  it("resets inactivity when a disconnected player resumes", () => {
+    let now = 1_000;
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234"] }),
+      [],
+      () => now,
+    );
+    const session = successfulSession(manager.createRoom("Alice", "socket-a"));
+    manager.disconnectConnection("socket-a");
+    now += 50_000;
+    expect(manager.resumeRoom(session.roomCode, session.reconnectToken, "socket-b").success)
+      .toBe(true);
+    manager.disconnectConnection("socket-b");
+
+    now += 59_999;
+    expect(manager.cleanupAbandonedRooms(60_000)).toBe(0);
+    now += 1;
+    expect(manager.cleanupAbandonedRooms(60_000)).toBe(1);
   });
 });
 

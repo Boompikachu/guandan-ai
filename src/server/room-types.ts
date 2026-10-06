@@ -20,5 +20,5 @@ export type RoomRecord = {
   revision: number;
   events: string[];
   createdAt: number;
+  lastActivityAt: number;
 };
-

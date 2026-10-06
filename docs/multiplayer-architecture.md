@@ -40,3 +40,6 @@ Play, Pass, Tribute card selection, and Return-Tribute card selection always rem
 
 Rooms exist only in one Node process. A server restart loses every active room, and multiple server instances cannot share rooms. Persistence and distributed room synchronization are intentionally deferred to a later stage.
 
+Stage 11 adds conservative memory cleanup: a room is eligible for deletion only after every
+player is disconnected and the room has been inactive for 24 hours. Active connections always
+protect a room from cleanup.
