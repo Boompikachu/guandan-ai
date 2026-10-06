@@ -424,7 +424,7 @@ describe("responding to a current play", () => {
 
   it("filters losing natural and wildcard meanings from legal responses", () => {
     const cards = [suitedCard("10", "HEARTS", 0), suitedCard("10", "HEARTS", 1)];
-    const result = validate(cards, pair("2", "10"), "10");
+    const result = validate(cards, pair("A", "10"), "10");
 
     expect(result.status).toBe("LEGAL");
     if (result.status !== "LEGAL") return;

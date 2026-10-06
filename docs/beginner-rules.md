@@ -17,21 +17,21 @@ A match consists of multiple rounds. Each round has one active Current Level Ran
 
 ## 3. Current Level Rank and Card Strength
 
-Every round has one Current Level Rank. It changes as teams progress; it is not a fixed rank. For rank-based strength comparisons, place the Current Level Rank above 2 and skip it from its usual position in the normal rank order. If 2 itself is the Current Level Rank, it appears only once in the order.
+Every round has one Current Level Rank. It changes as teams progress; it is not a fixed rank. For rank-based strength comparisons, place the Current Level Rank above A and skip it from its usual position in the normal rank order. If 2 itself is the Current Level Rank, it appears once above A and does not also appear at the bottom.
 
-General card-strength order, from strongest to weakest:
+When 2 is not the Current Level Rank, general card-strength order, from strongest to weakest, is:
 
-**Big Joker > Small Joker > Current Level Rank > 2 > A > K > Q > J > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3**
+**Big Joker > Small Joker > Current Level Rank > A > K > Q > J > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3 > 2**
 
 For example, when 10 is the Current Level Rank:
 
-**Big Joker > Small Joker > 10 > 2 > A > K > Q > J > 9 > 8 > 7 > 6 > 5 > 4 > 3**
+**Big Joker > Small Joker > 10 > A > K > Q > J > 9 > 8 > 7 > 6 > 5 > 4 > 3 > 2**
 
 When 2 is the Current Level Rank:
 
 **Big Joker > Small Joker > 2 > A > K > Q > J > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3**
 
-Use this order for rank-based comparisons, such as Singles, Pairs, Triples, Full Houses, and equal-size Rank Bombs. It is not the sequence order for Straights, Consecutive Pairs, Triple Sequences, or Straight Flushes. Those combinations use separate sequence logic. The Level Rank promotion affects card strength but never changes sequence adjacency. For example, if 7 is the Level Rank, 7 is strong in rank-based comparisons, but `5-6-7-8-9` remains an ordinary sequence containing 7. Do not use one universal rank number for all comparisons.
+Use this order for rank-based comparisons, such as Singles, Pairs, Triples, Full Houses, equal-size Rank Bombs, Tribute cards, and Return-Tribute fallback selection. It is not the sequence order for Straights, Consecutive Pairs, Triple Sequences, or Straight Flushes. Those combinations use separate sequence logic. The Level Rank promotion affects card strength but never changes sequence adjacency. For example, if 7 is the Level Rank, 7 is strong in rank-based comparisons, but `5-6-7-8-9` remains an ordinary sequence containing 7. Do not use one universal rank number for all comparisons.
 
 ## 4. Heart Level Wildcard (逢人配)
 
@@ -212,39 +212,46 @@ No match-ending logic is implemented by this document.
 
 ## 12. Tribute, Return Tribute, Anti-Tribute, and Next-Round Lead
 
-These rules apply based on the finishing result of the previous round. Terms used below: **头游** means the first-place finisher, **末游** means the last-place finisher, **双下** means both members of one team occupy the final two finishing positions, **进贡** means Tribute, **还贡** means Return Tribute, and **抗贡** means Anti-Tribute.
+These rules apply after Stage 7A processes the previous completed round and after the next round's 108 cards have been dealt. Tribute and Anti-Tribute inspect the newly dealt hands, not the previous round's hands. This procedure does not shuffle or deal cards. Terms used below: **头游** means the first-place finisher, **二游** means the second-place finisher, **末游** means the last-place finisher, **双下** means both members of one team occupy the first two finishing positions, **进贡** means Tribute, **还贡** means Return Tribute, and **抗贡** means Anti-Tribute.
+
+The pre-round exchange engine validates four hands of 27 cards, 108 cards total, and unique physical card IDs. Exchanges move the selected physical cards by ID; they do not create, duplicate, or discard cards. A completed exchange returns all hands to 27 cards. No new-round dealing or starting-seat randomization occurs inside the pure engine.
 
 ### Return Tribute Card Eligibility (还贡)
 
-When a winning player must return a card after receiving Tribute, the returned card must have a printed rank of 10 or lower, including 10. It must not have the Current Level Rank if that rank is 10 or lower. Do not use general card-strength order to determine eligibility: the restriction uses the card's printed rank and the Current Level Rank.
+When a winning player must return a card after receiving Tribute, normally eligible printed ranks are 2 through 10, inclusive. If the Current Level Rank is between 2 and 10, that printed rank is excluded. Do not use general card-strength order for normal eligibility; it is based on printed rank and Current Level Rank. If any normally eligible card exists in the returner's current hand, they may return any one of those eligible physical cards.
 
-J, Q, K, A, 2, Small Joker, and Big Joker are not eligible. Ranks 10, 9, 8, 7, 6, 5, 4, and 3 are normally eligible, except the Current Level Rank is excluded when it is 10 or lower.
+J, Q, K, A, Small Joker, and Big Joker are not normally eligible. A Level Rank of J, Q, K, or A does not remove any rank from the normal 2-through-10 return range.
 
 Examples:
 
-- If the Current Level Rank is 6, ranks 10, 9, 8, 7, 5, 4, and 3 may be returned; rank 6 may not.
-- If the Current Level Rank is 10, ranks 9, 8, 7, 6, 5, 4, and 3 may be returned; rank 10 may not.
-- If the Current Level Rank is J or higher, the Level Rank exclusion does not remove any rank from the normal 10-or-lower range. For example, with Q as the Current Level Rank, ranks 10, 9, 8, 7, 6, 5, 4, and 3 remain eligible.
+- If the Current Level Rank is 6, ranks 2, 3, 4, 5, 7, 8, 9, and 10 may be returned; rank 6 may not.
+- If the Current Level Rank is 10, ranks 2, 3, 4, 5, 6, 7, 8, and 9 may be returned; rank 10 may not.
+- If the Current Level Rank is 2, ranks 3 through 10 may be returned; rank 2 may not.
+- If the Current Level Rank is Q, ranks 2 through 10 remain eligible.
+
+If no normally eligible Return-Tribute card exists, fallback is mandatory: return a Single of the lowest strength in the player's current hand using the general rank-strength order. If several physical cards tie at the lowest strength, the player may choose any tied card. Fallback overrides the normal printed-rank restrictions only when the normal eligible set is empty.
+
+The fallback guard is `normalEligibleReturnCards.length === 0`. The returner must use physical cards currently in their hand after receiving Tribute. The submitted card is identified by physical card ID.
 
 ### Double-Down (双下)
 
-When the previous round ends in 双下, both players on the losing team pay Tribute. Each gives one highest card from their hand to one of the two winning players, for two Tribute cards total. Each winning player then returns one eligible card to the corresponding losing player, following the [Return Tribute Card Eligibility](#return-tribute-card-eligibility) rule.
+When the previous round ends in 双下, both players on the losing team pay Tribute unless Anti-Tribute occurs. Each gives one highest eligible Single from their newly dealt hand, for two Tribute cards total. After both cards are selected, compare their strength using the general rank-strength order. The stronger Tribute card goes to 头游; the other goes to 二游. Each recipient returns one eligible physical card to the losing player whose Tribute they received, following the [Return Tribute Card Eligibility](#return-tribute-card-eligibility) rule.
 
 #### Double-Down Anti-Tribute (双下抗贡)
 
-Anti-Tribute occurs if the two losing players collectively hold both Big Jokers: either each has one Big Joker, or one player has both. Tribute and Return Tribute are cancelled. The previous round's 头游 leads the new round.
+Check Anti-Tribute before any Tribute transfer by counting the physical Big Jokers in the two losing players' newly dealt hands. If together they hold both Big Jokers, Anti-Tribute occurs, whether each has one or one player has both. Tribute and Return Tribute are cancelled, hands remain unchanged, and the previous round's 头游 leads the new round.
 
 #### Double-Down Lead After Normal Tribute
 
-If there is no Anti-Tribute, compare the two cards paid as Tribute using the normal card-strength rules, unless a later rule explicitly overrides them. The player who gave the higher Tribute card leads the new round. If the Tribute cards are equal in strength, randomly select one of the two Tribute-paying players to lead.
+If there is no Anti-Tribute, compare the two selected Tribute cards with the general card-strength order. The player who paid the stronger card leads the new round. If their cards have equal strength, do not compare suits or use hidden randomness: the engine waits for an explicit resolution selecting one of the two Tribute-paying players to lead.
 
 ### Single-Down (单下)
 
-When only one opposing player finished last, the 末游 gives one highest card to the winner. The winner returns one eligible card to the 末游, following the [Return Tribute Card Eligibility](#return-tribute-card-eligibility) rule.
+Whenever the previous round is not 双下, only the 末游 pays one highest eligible Single from their newly dealt hand to 头游. This applies even if the third- and fourth-place finishers are from different teams. The winner returns one eligible physical card to the 末游, following the [Return Tribute Card Eligibility](#return-tribute-card-eligibility) rule. This is the only Tribute transfer in a non-Double-Down round.
 
 #### Single-Down Anti-Tribute (单下抗贡)
 
-If the 末游 holds both Big Jokers, Anti-Tribute occurs. Tribute and Return Tribute are cancelled. The previous round's 头游 leads the new round.
+Before normal Tribute, check the 末游's newly dealt hand. Anti-Tribute occurs only if that player holds both physical Big Jokers. One Big Joker alone is not Anti-Tribute; in that case normal Tribute applies and the Big Joker is not exempt from highest-card selection. When Anti-Tribute occurs, Tribute and Return Tribute are cancelled, hands remain unchanged, and the previous round's 头游 leads the new round.
 
 #### Single-Down Lead After Normal Tribute
 
@@ -253,11 +260,15 @@ If there is no Anti-Tribute, the Tribute giver, who is the previous round's 末�
 ### Next-Round Lead Summary
 These rules determine who leads the next round; they do not determine who leads a new trick within an ongoing round.
 
-- Double-Down with no Anti-Tribute: the giver of the higher Tribute card leads; if the cards are equal in strength, randomly select one of the two Tribute givers.
+- Double-Down with no Anti-Tribute: the giver of the stronger Tribute card leads; equal-strength cards require an explicit choice between the two Tribute payers, with no suit ranking or core-engine randomness.
 - Single-Down with no Anti-Tribute: the Tribute giver / previous 末游 leads.
 - Any Anti-Tribute situation: the previous 头游 leads.
 
-These Tribute mechanics are documented but are not implemented here.
+For equal-strength Double-Down Tribute cards, the exchange also requires an explicit recipient assignment: choose which payer's card goes to 头游; the other goes to 二游. This choice and the equal-strength starting-seat choice are separate resolutions. A future orchestration layer may choose randomly, but the deterministic core engine does not.
+
+The exchange is a state machine with Tribute submission, equal-card recipient resolution when needed, Return submission, equal-card leader resolution when needed, and completion phases. It uses physical card IDs for payer and returner choices and exposes structured transfer records and the resulting `startingSeat` for a later round initializer. It does not itself create the next `RoundState`.
+
+All successful exchanges move the actual selected physical card object, preserving its ID, deck index, printed rank, and suit. A completed exchange has four 27-card hands, with all 108 physical cards present once each. Anti-Tribute completes without changing any hand. Equal-strength payer cards have no suit order: recipient assignment and equal-strength leader selection are explicit choices restricted to the two Tribute payers.
 
 ## 13. First-Round Lead
 
@@ -311,8 +322,8 @@ For example, general card strength puts the Current Level Rank above 2, while se
 
 ## NEEDS DECISION
 
-No additional wildcard legality questions are currently identified as unresolved by the authoritative rules in this document.
+- Return fallback example conflict: the specification says fallback applies only when there are zero normal eligible cards, but also asks for a fallback-only hand containing a non-Level 2. Printed rank 2 is normally eligible whenever the Current Level Rank is not 2, so those conditions cannot both hold. The engine follows the explicit empty-eligible-set guard; the intended example/exception needs clarification.
 
 ## Contradictions
 
-No direct contradiction was identified in the supplied rules. The remaining missing details above are left open rather than resolved by assumption.
+The Return fallback test example conflicts with the normal eligibility rule as described in [NEEDS DECISION](#needs-decision). The engine follows the explicit rule that fallback is available only when the normal eligible set is empty; no additional exception for 2 is assumed.

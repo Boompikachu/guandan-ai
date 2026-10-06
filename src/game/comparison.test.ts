@@ -210,7 +210,8 @@ describe("general card strength", () => {
     ["BIG_JOKER", "SMALL_JOKER", "6"],
     ["SMALL_JOKER", "6", "6"],
     ["6", "2", "6"],
-    ["2", "A", "6"],
+    ["A", "2", "6"],
+    ["3", "2", "6"],
     ["A", "K", "6"],
     ["4", "3", "6"],
     ["10", "2", "10"],
@@ -223,8 +224,8 @@ describe("general card strength", () => {
   it("places Level Rank 10 once, above 2", () => {
     const order = getGeneralRankOrder("10");
     expect(order).toEqual([
-      "BIG_JOKER", "SMALL_JOKER", "10", "2", "A", "K", "Q", "J",
-      "9", "8", "7", "6", "5", "4", "3",
+      "BIG_JOKER", "SMALL_JOKER", "10", "A", "K", "Q", "J", "9",
+      "8", "7", "6", "5", "4", "3", "2",
     ]);
     expect(new Set(order).size).toBe(order.length);
   });
@@ -250,7 +251,7 @@ describe("normal play comparison", () => {
 
     expect(comparePlays(single("10", "10"), single("2", "10"), "10").outcome)
       .toBe("BEATS");
-    expect(comparePlays(single("2", "10"), single("A", "10"), "10").outcome)
+    expect(comparePlays(single("A", "10"), single("2", "10"), "10").outcome)
       .toBe("BEATS");
     expect(comparePlays(single("A", "10"), single("K", "10"), "10").outcome)
       .toBe("BEATS");
@@ -417,7 +418,7 @@ describe("Bomb comparison", () => {
   it("compares equal-size Rank Bombs using General Rank Strength", () => {
     expect(comparePlays(rankBomb("10", 4, "10"), rankBomb("2", 4, "10"), "10").outcome)
       .toBe("BEATS");
-    expect(comparePlays(rankBomb("2", 4, "10"), rankBomb("A", 4, "10"), "10").outcome)
+    expect(comparePlays(rankBomb("A", 4, "10"), rankBomb("2", 4, "10"), "10").outcome)
       .toBe("BEATS");
     expect(comparePlays(rankBomb("9", 4), rankBomb("8", 4), "6").outcome)
       .toBe("BEATS");

@@ -6,7 +6,6 @@ const JOKER_STRENGTH_ORDER: readonly JokerRank[] = [
 ];
 
 const NORMAL_RANK_STRENGTH_ORDER: readonly OrdinaryRank[] = [
-  "2",
   "A",
   "K",
   "Q",
@@ -19,6 +18,7 @@ const NORMAL_RANK_STRENGTH_ORDER: readonly OrdinaryRank[] = [
   "5",
   "4",
   "3",
+  "2",
 ];
 
 export type StrengthComparison = -1 | 0 | 1;
