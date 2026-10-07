@@ -20,6 +20,7 @@ import {
   contextualPrompt,
   cardShortLabel,
   interpretationLabel,
+  playerLabel,
   wildcardDetails,
 } from "../../lib/game-ui";
 import { createTimeoutRoundAction, TURN_DURATION_MS } from "../../lib/turn-timeout";
@@ -238,7 +239,9 @@ function RoundTable({
           <div className={styles.centerStage}>
             <TrickArea
               currentPlay={state.roundState.trick.currentPlay}
-              winningSeat={state.roundState.trick.winningSeat}
+              playedBy={state.roundState.trick.winningSeat === null
+                ? null
+                : playerLabel(state.roundState.trick.winningSeat)}
               currentLevelRank={state.roundState.currentLevelRank}
             />
           </div>

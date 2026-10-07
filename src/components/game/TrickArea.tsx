@@ -1,8 +1,7 @@
 import type { CombinationInterpretation } from "../../game/interpretations";
-import type { LevelRank, Seat } from "../../game/types";
+import type { LevelRank } from "../../game/types";
 import {
   interpretationLabel,
-  playerLabel,
   wildcardDetails,
 } from "../../lib/game-ui";
 import { Card } from "./Card";
@@ -10,13 +9,13 @@ import styles from "./TrickArea.module.css";
 
 type TrickAreaProps = {
   currentPlay: CombinationInterpretation | null;
-  winningSeat: Seat | null;
+  playedBy: string | null;
   currentLevelRank: LevelRank;
 };
 
 export function TrickArea({
   currentPlay,
-  winningSeat,
+  playedBy,
   currentLevelRank,
 }: TrickAreaProps) {
   if (!currentPlay) {
@@ -40,7 +39,7 @@ export function TrickArea({
       <div className={styles.content}>
         <span className={styles.heading}>Current Trick</span>
         <h2 className={styles.combination}>{interpretationLabel(currentPlay)}</h2>
-        {winningSeat !== null ? <span className={styles.lead}>Played by {playerLabel(winningSeat)}</span> : null}
+        {playedBy ? <span className={styles.lead}>Played by {playedBy}</span> : null}
         <div className={styles.cards}>
           {currentPlay.physicalCards.map((card) => (
             <Card

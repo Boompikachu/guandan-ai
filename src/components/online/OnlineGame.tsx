@@ -30,6 +30,7 @@ import { ConnectionBadge } from "./ConnectionBadge";
 import { CompetitiveRankBadge } from "../competitive/CompetitiveRankBadge";
 import styles from "./OnlineGame.module.css";
 import { UiIcon } from "./UiIcon";
+import { getOnlineTrickOwnerName } from "./trick-owner";
 
 type OnlineGameProps = {
   view: ClientGameView;
@@ -424,7 +425,7 @@ export function OnlineGame({
           <div className={styles.centerStage}>
             <TrickArea
               currentPlay={view.currentPlay}
-              winningSeat={view.winningSeat}
+              playedBy={getOnlineTrickOwnerName(view)}
               currentLevelRank={view.currentLevelRank}
             />
           </div>

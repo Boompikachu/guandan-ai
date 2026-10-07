@@ -686,7 +686,15 @@ export function GuidedTutorial() {
             <div className={styles.top}><HiddenBot seat={2} count={roundState.roundState.hands[2].length} current={roundState.roundState.currentTurn === 2} finished={finishPosition(roundState, 2)} turnDeadlineAt={turnDeadlineAt} /></div>
             <div className={styles.left}><HiddenBot seat={1} count={roundState.roundState.hands[1].length} current={roundState.roundState.currentTurn === 1} finished={finishPosition(roundState, 1)} turnDeadlineAt={turnDeadlineAt} /></div>
             <div className={styles.right}><HiddenBot seat={3} count={roundState.roundState.hands[3].length} current={roundState.roundState.currentTurn === 3} finished={finishPosition(roundState, 3)} turnDeadlineAt={turnDeadlineAt} /></div>
-            <div className={styles.trick}><TrickArea currentPlay={roundState.roundState.trick.currentPlay} winningSeat={roundState.roundState.trick.winningSeat} currentLevelRank={roundState.roundState.currentLevelRank} /></div>
+            <div className={styles.trick}>
+              <TrickArea
+                currentPlay={roundState.roundState.trick.currentPlay}
+                playedBy={roundState.roundState.trick.winningSeat === null
+                  ? null
+                  : seatName(roundState.roundState.trick.winningSeat)}
+                currentLevelRank={roundState.roundState.currentLevelRank}
+              />
+            </div>
             <div className={styles.bottom}>
               <section className={styles.coach} aria-live="polite">
                 <div className={styles.coachDesktop}><span>Guandan Coach</span><strong>{tutorialCoachTitle}</strong><p>{tutorialCoachBody}</p></div>
