@@ -2,6 +2,7 @@ services:
   - type: web
     name: guandan-go
     runtime: node
+    plan: free
     numInstances: 1
     buildCommand: npm ci && npm run build
     startCommand: npm start
