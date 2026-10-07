@@ -7,17 +7,33 @@ import {
 } from "../game/match-engine";
 import { SEATS } from "../game/types";
 import type { Card, Seat } from "../game/types";
+import { getTeamForSeat } from "../game/teams";
+import {
+  createDiceContest,
+  getCurrentRollRound,
+  getOpeningStartingSeat,
+  recordDiceRoll,
+} from "../shared/round-opening";
 import type {
   ClientRoomView,
   CommandError,
   CommandErrorCode,
   MutationAck,
+  LeaveRoomAck,
+  PublicRoomSummary,
   RoomSessionCredentials,
+  RoomVisibility,
   SessionAck,
 } from "../shared/multiplayer-protocol";
 import { buildClientRoomView } from "./client-view";
+import {
+  InMemoryLeaderboardStore,
+  type LeaderboardStore,
+  type PublicLeaderboardSnapshot,
+} from "./leaderboard-store";
 import { secureServerRandom, type ServerRandomSource } from "./random";
 import type { RoomPlayer, RoomRecord } from "./room-types";
+import { createTimeoutRoundAction, TURN_DURATION_MS } from "../lib/turn-timeout";
 
 const MAX_DISPLAY_NAME_LENGTH = 20;
 const MAX_ROOM_CODE_ATTEMPTS = 100;
@@ -60,6 +76,11 @@ function normalizeName(name: string): string | null {
     return null;
   }
   return normalized;
+}
+
+function normalizeCompetitivePlayerId(playerId: string): string | null {
+  const normalized = playerId.trim();
+  return /^[A-Za-z0-9_-]{20,128}$/.test(normalized) ? normalized : null;
 }
 
 function addEvents(room: RoomRecord, events: readonly string[]): void {
@@ -132,11 +153,17 @@ export class RoomManager {
     private readonly random: ServerRandomSource = secureServerRandom,
     initialRooms: Iterable<readonly [string, RoomRecord]> = [],
     private readonly now: () => number = Date.now,
+    private readonly leaderboardStore: LeaderboardStore = new InMemoryLeaderboardStore(),
   ) {
     this.rooms = new Map(initialRooms);
     for (const room of this.rooms.values()) {
       for (const player of room.players) {
         if (!player) continue;
+        const profile = this.leaderboardStore.upsertPlayer(
+          player.competitivePlayerId,
+          player.name,
+        );
+        player.rating = profile.rating;
         for (const connectionId of player.connectionIds) {
           this.connections.set(connectionId, {
             roomCode: room.code,
@@ -144,10 +171,21 @@ export class RoomManager {
           });
         }
       }
+      if (room.status === "COMPLETE") this.recordCompletedMatch(room);
+      room.turnSequence ??= 0;
+      room.turnDeadlineAt ??= null;
+      if (room.match?.phase === "ROUND_IN_PROGRESS" && room.turnDeadlineAt === null) {
+        this.startTurnTimer(room);
+      }
     }
   }
 
-  createRoom(displayName: string, connectionId: string): SessionAck {
+  createRoom(
+    displayName: string,
+    connectionId: string,
+    visibility: RoomVisibility = "PUBLIC",
+    competitivePlayerId?: string,
+  ): SessionAck {
     const name = normalizeName(displayName);
     if (!name) {
       return failure("INVALID_NAME", "Enter a display name between 1 and 20 characters.");
@@ -163,14 +201,27 @@ export class RoomManager {
     }
     if (!code) return failure("SERVER_ERROR", "A unique room code could not be generated.");
 
-    const player = this.createPlayer(0, name, connectionId);
+    const normalizedPlayerId = competitivePlayerId === undefined
+      ? undefined
+      : normalizeCompetitivePlayerId(competitivePlayerId);
+    if (competitivePlayerId !== undefined && !normalizedPlayerId) {
+      return failure("INVALID_PLAYER_ID", "Your competitive player identity is invalid.");
+    }
+
+    const player = this.createPlayer(0, name, connectionId, normalizedPlayerId ?? undefined);
     const now = this.now();
     const room: RoomRecord = {
       code,
+      visibility,
       hostPlayerId: player.id,
       players: [player, null, null, null],
       status: "LOBBY",
       match: null,
+      opening: null,
+      matchResultId: null,
+      ratingResults: {},
+      turnDeadlineAt: null,
+      turnSequence: 0,
       revision: 1,
       events: [`${name} created the room.`],
       createdAt: now,
@@ -184,7 +235,12 @@ export class RoomManager {
     return this.sessionSuccess(room, player);
   }
 
-  joinRoom(roomCode: string, displayName: string, connectionId: string): SessionAck {
+  joinRoom(
+    roomCode: string,
+    displayName: string,
+    connectionId: string,
+    competitivePlayerId?: string,
+  ): SessionAck {
     const code = normalizeRoomCode(roomCode);
     const room = this.rooms.get(code);
     if (!room) return failure("ROOM_NOT_FOUND", "Room not found.");
@@ -196,10 +252,22 @@ export class RoomManager {
     if (!name) {
       return failure("INVALID_NAME", "Enter a display name between 1 and 20 characters.");
     }
+    const normalizedPlayerId = competitivePlayerId === undefined
+      ? undefined
+      : normalizeCompetitivePlayerId(competitivePlayerId);
+    if (competitivePlayerId !== undefined && !normalizedPlayerId) {
+      return failure("INVALID_PLAYER_ID", "Your competitive player identity is invalid.");
+    }
+    if (
+      normalizedPlayerId &&
+      room.players.some((candidate) => candidate?.competitivePlayerId === normalizedPlayerId)
+    ) {
+      return failure("DUPLICATE_PLAYER", "This competitive identity is already seated here.");
+    }
     const seat = SEATS.find((candidate) => room.players[candidate] === null);
     if (seat === undefined) return failure("ROOM_FULL", "This room is full.");
 
-    const player = this.createPlayer(seat, name, connectionId);
+    const player = this.createPlayer(seat, name, connectionId, normalizedPlayerId ?? undefined);
     room.players[seat] = player;
     this.touchRoom(room);
     room.revision += 1;
@@ -251,6 +319,60 @@ export class RoomManager {
     return room.code;
   }
 
+  leaveRoom(reconnectToken: string): LeaveRoomAck {
+    const resolved = this.resolveToken(reconnectToken);
+    if (!resolved) return failure("INVALID_SESSION", "Your room session is invalid.");
+    const { room, player } = resolved;
+    const matchCancelled = room.status === "ACTIVE";
+
+    for (const connectionId of player.connectionIds) {
+      this.connections.delete(connectionId);
+    }
+
+    if (room.status !== "LOBBY") {
+      this.rooms.delete(room.code);
+      for (const [connectionId, session] of this.connections) {
+        if (session.roomCode === room.code) this.connections.delete(connectionId);
+      }
+      return {
+        success: true,
+        roomCode: room.code,
+        roomDeleted: true,
+        matchCancelled,
+      };
+    }
+
+    room.players[player.seat] = null;
+    const remaining = room.players.filter(
+      (candidate): candidate is RoomPlayer => candidate !== null,
+    );
+    if (remaining.length === 0) {
+      this.rooms.delete(room.code);
+      return {
+        success: true,
+        roomCode: room.code,
+        roomDeleted: true,
+        matchCancelled: false,
+      };
+    }
+
+    if (room.hostPlayerId === player.id) {
+      const nextHost = [...remaining].sort(
+        (left, right) => (left.joinedAt ?? left.seat) - (right.joinedAt ?? right.seat),
+      )[0];
+      if (nextHost) room.hostPlayerId = nextHost.id;
+    }
+    this.touchRoom(room);
+    room.revision += 1;
+    addEvents(room, [`${player.name} left the table.`]);
+    return {
+      success: true,
+      roomCode: room.code,
+      roomDeleted: false,
+      matchCancelled: false,
+    };
+  }
+
   setReady(reconnectToken: string, ready: boolean): MutationAck {
     const resolved = this.resolveToken(reconnectToken);
     if (!resolved) return failure("INVALID_SESSION", "Your room session is invalid.");
@@ -286,24 +408,147 @@ export class RoomManager {
       return failure("NOT_READY", "All four connected players must be ready.");
     }
 
-    const deck = this.random.shuffle(createDeck());
-    const revealedCard = this.random.choose(deck);
+    room.opening = {
+      stage: "WAITING_FOR_DICE",
+      diceContest: createDiceContest(),
+      pendingDeck: this.random.shuffle(createDeck()),
+      revealedCard: null,
+      startingSeat: null,
+    };
+    room.match = null;
+    room.turnDeadlineAt = null;
+    room.matchResultId = this.random.generatePlayerToken();
+    room.ratingResults = {};
+    room.status = "ACTIVE";
+    this.touchRoom(room);
+    room.revision += 1;
+    addEvents(room, ["Opening ceremony started. All four players roll two dice."]);
+    return { success: true, revision: room.revision };
+  }
+
+  rollOpeningDice(reconnectToken: string): MutationAck {
+    const resolved = this.resolveToken(reconnectToken);
+    if (!resolved) return failure("INVALID_SESSION", "Your room session is invalid.");
+    const { room, player } = resolved;
+    const opening = room.opening;
+    if (
+      room.status !== "ACTIVE" ||
+      !opening ||
+      (opening.stage !== "WAITING_FOR_DICE" &&
+        opening.stage !== "DICE_TIE_REROLL")
+    ) {
+      return failure("INVALID_OPENING_ACTION", "Dice are not being rolled now.");
+    }
+
+    const currentRound = getCurrentRollRound(opening.diceContest);
+    if (!currentRound.eligibleSeats.includes(player.seat)) {
+      return failure(
+        "INVALID_OPENING_ACTION",
+        "Only the players tied for the highest total may reroll.",
+      );
+    }
+    if (currentRound.rolls[player.seat] !== undefined) {
+      return failure("INVALID_OPENING_ACTION", "You already rolled in this stage.");
+    }
+
+    const result = recordDiceRoll(opening.diceContest, player.seat, [
+      this.random.rollDie(),
+      this.random.rollDie(),
+    ]);
+    if (!result.success) {
+      const message = result.error === "ALREADY_ROLLED"
+        ? "You already rolled in this stage."
+        : result.error === "NOT_ELIGIBLE"
+          ? "Only the players tied for the highest total may reroll."
+          : "You cannot roll dice now.";
+      return failure("INVALID_OPENING_ACTION", message);
+    }
+
+    const previousRoundCount = opening.diceContest.rounds.length;
+    opening.diceContest = result.state;
+    const completedRound = previousRoundCount < result.state.rounds.length
+      ? result.state.rounds.at(-2)
+      : result.state.rounds.at(-1);
+    const roll = completedRound?.rolls[player.seat];
+    const openingEvents = roll
+      ? [`${player.name} rolled ${roll.dice[0]} + ${roll.dice[1]} = ${roll.total}.`]
+      : [];
+
+    if (result.state.phase === "COMPLETE") {
+      opening.stage = "WAITING_FOR_FLIP";
+      const flipper = result.state.flipperSeat === null
+        ? null
+        : room.players[result.state.flipperSeat];
+      if (flipper) openingEvents.unshift(`${flipper.name} won the roll and will flip.`);
+    } else if (result.state.rounds.length > previousRoundCount) {
+      opening.stage = "DICE_TIE_REROLL";
+      const tiedSeats = getCurrentRollRound(result.state).eligibleSeats;
+      const tiedNames = tiedSeats.map((seat) => room.players[seat]?.name ?? `Player ${seat + 1}`);
+      openingEvents.unshift(`Highest tie: ${tiedNames.join(" and ")} reroll.`);
+    }
+
+    this.touchRoom(room);
+    room.revision += 1;
+    addEvents(room, openingEvents);
+    return { success: true, revision: room.revision };
+  }
+
+  flipOpeningCard(reconnectToken: string): MutationAck {
+    const resolved = this.resolveToken(reconnectToken);
+    if (!resolved) return failure("INVALID_SESSION", "Your room session is invalid.");
+    const { room, player } = resolved;
+    const opening = room.opening;
+    if (!opening || opening.stage !== "WAITING_FOR_FLIP") {
+      return failure("INVALID_OPENING_ACTION", "The starting card cannot be flipped now.");
+    }
+    const flipperSeat = opening.diceContest.flipperSeat;
+    if (flipperSeat === null || player.seat !== flipperSeat) {
+      return failure("INVALID_OPENING_ACTION", "Only the winning Flipper may reveal the card.");
+    }
+    const revealedCard = opening.pendingDeck[0];
+    if (!revealedCard) {
+      return failure("SERVER_ERROR", "The pending deck is unavailable.");
+    }
+
+    const startingSeat = getOpeningStartingSeat(flipperSeat, revealedCard);
+    opening.revealedCard = revealedCard;
+    opening.startingSeat = startingSeat;
+    opening.stage = "SHOWING_START_RESULT";
+    this.touchRoom(room);
+    room.revision += 1;
+    const starter = room.players[startingSeat]?.name ?? `Player ${startingSeat + 1}`;
+    addEvents(room, [`${player.name} flipped ${revealedCard.rank}. ${starter} leads Round 1.`]);
+    return { success: true, revision: room.revision };
+  }
+
+  completeOpening(roomCode: string): MutationAck {
+    const room = this.rooms.get(normalizeRoomCode(roomCode));
+    const opening = room?.opening;
+    if (
+      !room ||
+      !opening ||
+      opening.stage !== "SHOWING_START_RESULT" ||
+      !opening.revealedCard ||
+      opening.startingSeat === null
+    ) {
+      return failure("INVALID_OPENING_ACTION", "The opening result is not ready to deal.");
+    }
+
     const created = createMatchEngineState({
-      shuffledDeck: deck,
-      revealedCardId: revealedCard.id,
+      shuffledDeck: opening.pendingDeck,
+      revealedCardId: opening.revealedCard.id,
+      startingSeat: opening.startingSeat,
     });
     if (!created.success) {
       return failure("SERVER_ERROR", "The authoritative match could not be created.");
     }
 
     room.match = created.state;
-    room.status = "ACTIVE";
+    room.opening = null;
+    this.startTurnTimer(room);
     this.touchRoom(room);
     room.revision += 1;
-    const leader = created.state.roundState.currentTurn;
-    addEvents(room, [
-      `Match started. Player ${leader === null ? "?" : leader + 1} received the revealed card and leads.`,
-    ]);
+    addEvents(room, ["The complete 108-card deck was dealt: 27 cards to each player."]);
     return { success: true, revision: room.revision };
   }
 
@@ -369,6 +614,8 @@ export class RoomManager {
     if (advanced.changed) {
       room.match = advanced.state;
       room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
+      this.startTurnTimer(room);
+      this.recordCompletedMatch(room);
       this.touchRoom(room);
       room.revision += 1;
       addEvents(room, advanced.events);
@@ -388,6 +635,51 @@ export class RoomManager {
 
   getRoom(roomCode: string): Readonly<RoomRecord> | null {
     return this.rooms.get(normalizeRoomCode(roomCode)) ?? null;
+  }
+
+  expireTurn(roomCode: string, expectedTurnSequence: number): MutationAck {
+    const room = this.rooms.get(normalizeRoomCode(roomCode));
+    if (!room) return failure("ROOM_NOT_FOUND", "Room not found.");
+    if (room.turnSequence !== expectedTurnSequence) {
+      return failure("STALE_ACTION", "That turn has already ended.");
+    }
+    if (!this.commitExpiredTurn(room)) {
+      return failure("STALE_ACTION", "That turn is no longer due.");
+    }
+    return { success: true, revision: room.revision };
+  }
+
+  expireDueTurns(): string[] {
+    const changedRooms: string[] = [];
+    for (const room of this.rooms.values()) {
+      if (this.commitExpiredTurn(room)) changedRooms.push(room.code);
+    }
+    return changedRooms;
+  }
+
+  listPublicRooms(): PublicRoomSummary[] {
+    return [...this.rooms.values()]
+      .filter(
+        (room) =>
+          room.visibility === "PUBLIC" &&
+          room.status === "LOBBY" &&
+          room.players.some((player) => player === null),
+      )
+      .sort((left, right) => left.createdAt - right.createdAt || left.code.localeCompare(right.code))
+      .map((room) => {
+        const host = room.players.find((player) => player?.id === room.hostPlayerId);
+        return {
+          code: room.code,
+          hostDisplayName: host?.name ?? "Host",
+          playerCount: room.players.filter((player) => player !== null).length,
+          maxPlayers: 4,
+          status: "WAITING",
+        };
+      });
+  }
+
+  getLeaderboard(currentPlayerId?: string): PublicLeaderboardSnapshot {
+    return this.leaderboardStore.getLeaderboard(currentPlayerId, 100);
   }
 
   getConnectionSession(connectionId: string): ConnectionSession | null {
@@ -414,19 +706,118 @@ export class RoomManager {
     return removed;
   }
 
-  private createPlayer(seat: Seat, name: string, connectionId: string): RoomPlayer {
+  private createPlayer(
+    seat: Seat,
+    name: string,
+    connectionId: string,
+    competitivePlayerId?: string,
+  ): RoomPlayer {
+    const id = this.random.generatePlayerToken();
+    const playerId = competitivePlayerId ?? id;
+    const profile = this.leaderboardStore.upsertPlayer(playerId, name);
     return {
-      id: this.random.generatePlayerToken(),
+      id,
       reconnectToken: this.random.generatePlayerToken(),
       seat,
       name,
       ready: false,
       connectionIds: new Set([connectionId]),
+      joinedAt: this.now(),
+      competitivePlayerId: playerId,
+      rating: profile.rating,
     };
   }
 
   private touchRoom(room: RoomRecord): void {
     room.lastActivityAt = this.now();
+  }
+
+  private startTurnTimer(room: RoomRecord): void {
+    if (room.match?.phase !== "ROUND_IN_PROGRESS" || room.match.roundState.currentTurn === null) {
+      room.turnDeadlineAt = null;
+      return;
+    }
+    room.turnSequence += 1;
+    room.turnDeadlineAt = this.now() + TURN_DURATION_MS;
+  }
+
+  private commitExpiredTurn(room: RoomRecord): boolean {
+    const deadline = room.turnDeadlineAt;
+    const match = room.match;
+    if (
+      deadline === null ||
+      this.now() < deadline ||
+      match?.phase !== "ROUND_IN_PROGRESS" ||
+      match.roundState.currentTurn === null
+    ) return false;
+
+    const seat = match.roundState.currentTurn;
+    const action = createTimeoutRoundAction(match.roundState);
+    if (!action) {
+      room.turnDeadlineAt = null;
+      return false;
+    }
+    const result = applyMatchAction(match, { type: "ROUND_ACTION", action });
+    if (!result.success) {
+      room.turnDeadlineAt = null;
+      return false;
+    }
+    const advanced = this.advanceState(result.state);
+    if (!advanced.success) {
+      room.turnDeadlineAt = null;
+      return false;
+    }
+
+    room.match = advanced.state;
+    room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
+    const playerName = room.players[seat]?.name ?? `Player ${seat + 1}`;
+    const timeoutEvent = action.type === "PASS"
+      ? `${playerName} timed out and automatically passed.`
+      : `${playerName} timed out and automatically played the weakest legal Single.`;
+    this.startTurnTimer(room);
+    this.recordCompletedMatch(room);
+    this.touchRoom(room);
+    room.revision += 1;
+    addEvents(room, [...advanced.events, timeoutEvent]);
+    return true;
+  }
+
+  private recordCompletedMatch(room: RoomRecord): void {
+    if (
+      room.status !== "COMPLETE" ||
+      room.match?.phase !== "MATCH_COMPLETE" ||
+      !room.matchResultId
+    ) return;
+    const players = room.players.filter(
+      (player): player is RoomPlayer => player !== null,
+    );
+    if (players.length !== 4) return;
+
+    const result = this.leaderboardStore.recordCompletedMatch({
+      matchResultId: room.matchResultId,
+      winningTeam: room.match.matchState.winner,
+      players: players.map((player) => ({
+        playerId: player.competitivePlayerId,
+        displayName: player.name,
+        team: getTeamForSeat(player.seat),
+      })),
+    });
+
+    for (const playerResult of result.players) {
+      const player = players.find(
+        (candidate) => candidate.competitivePlayerId === playerResult.playerId,
+      );
+      if (!player) continue;
+      player.rating = playerResult.after;
+      room.ratingResults[player.seat] = {
+        before: playerResult.before,
+        after: playerResult.after,
+        delta: playerResult.delta,
+        rankBefore: playerResult.rankBefore,
+        rankAfter: playerResult.rankAfter,
+        rankUp: playerResult.rankUp,
+      };
+    }
   }
 
   private sessionSuccess(room: RoomRecord, player: RoomPlayer): SessionAck {
@@ -462,6 +853,10 @@ export class RoomManager {
       return failure("INVALID_PHASE", "The match has not started.");
     }
 
+    if (this.commitExpiredTurn(room)) {
+      return failure("STALE_ACTION", "Your action arrived after the turn deadline.");
+    }
+
     const result = applyMatchAction(room.match, createAction(player.seat));
     if (!result.success) {
       return { success: false, error: engineError(result.error, fallbackCode) };
@@ -475,6 +870,8 @@ export class RoomManager {
 
     room.match = advanced.state;
     room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
+    this.startTurnTimer(room);
+    this.recordCompletedMatch(room);
     this.touchRoom(room);
     room.revision += 1;
     addEvents(room, [...advanced.events, ...events]);
@@ -552,10 +949,12 @@ export function createDeterministicRandomSource(
     tokens?: readonly string[];
     chooseIndex?: number;
     shuffle?: <T>(values: readonly T[]) => T[];
+    diceValues?: readonly number[];
   } = {},
 ): ServerRandomSource {
   let roomCodeIndex = 0;
   let tokenIndex = 0;
+  let dieIndex = 0;
   return {
     generateRoomCode: () => {
       const value = options.roomCodes?.[roomCodeIndex] ?? `ROOM${String(roomCodeIndex + 1).padStart(2, "0")}`;
@@ -572,6 +971,12 @@ export function createDeterministicRandomSource(
       const index = Math.min(options.chooseIndex ?? 0, values.length - 1);
       const value = values[index];
       if (value === undefined) throw new RangeError("Cannot choose from an empty collection.");
+      return value;
+    },
+    rollDie: () => {
+      const defaults = [6, 6, 5, 5, 4, 4, 3, 3] as const;
+      const value = options.diceValues?.[dieIndex] ?? defaults[dieIndex % defaults.length] ?? 1;
+      dieIndex += 1;
       return value;
     },
   };

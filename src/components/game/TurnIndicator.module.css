@@ -1,0 +1,115 @@
+.indicator {
+  --turn-progress: 360deg;
+  position: relative;
+  display: inline-grid;
+  min-width: 8.4rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.48rem;
+  padding: 0.35rem 0.58rem;
+  border: 1px solid rgb(239 201 118 / 68%);
+  border-radius: 0.72rem;
+  color: #f3d795;
+  background: linear-gradient(150deg, rgb(51 37 20 / 96%), rgb(12 15 16 / 97%));
+  box-shadow: 0 0 0 1px rgb(255 244 211 / 7%) inset, 0 0 1.1rem rgb(224 169 68 / 32%);
+}
+
+.pointer {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 0.38rem solid transparent;
+  filter: drop-shadow(0 0 0.25rem rgb(236 195 105 / 72%));
+}
+
+.bottom .pointer { bottom: -0.78rem; left: 50%; border-top-color: #e8c678; transform: translateX(-50%); }
+.top .pointer { top: -0.78rem; left: 50%; border-bottom-color: #e8c678; transform: translateX(-50%); }
+.left .pointer { top: 50%; left: -0.78rem; border-right-color: #e8c678; transform: translateY(-50%); }
+.right .pointer { top: 50%; right: -0.78rem; border-left-color: #e8c678; transform: translateY(-50%); }
+
+.ring {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#efcc7d var(--turn-progress), rgb(255 255 255 / 12%) 0);
+  box-shadow: 0 0 0.6rem rgb(229 188 107 / 25%);
+}
+
+.ring i {
+  width: 1.12rem;
+  height: 1.12rem;
+  border-radius: 50%;
+  background: #121516;
+}
+
+.copy strong,
+.copy small {
+  display: block;
+  white-space: nowrap;
+}
+
+.copy strong {
+  color: #f2d795;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.copy small {
+  max-width: 6rem;
+  margin-top: 0.08rem;
+  overflow: hidden;
+  color: #c7b68f;
+  font-size: 0.48rem;
+  text-overflow: ellipsis;
+}
+
+.indicator time {
+  min-width: 2.55rem;
+  color: #fff0c9;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.urgent {
+  border-color: #e16454;
+  box-shadow: 0 0 1rem rgb(210 64 49 / 42%);
+}
+
+.urgent .ring {
+  background: conic-gradient(#e45e4d var(--turn-progress), rgb(255 255 255 / 12%) 0);
+}
+
+.urgent time { color: #ff9487; }
+
+.compact {
+  min-width: 6.8rem;
+  gap: 0.32rem;
+  padding: 0.24rem 0.4rem;
+  border-radius: 0.52rem;
+}
+
+.compact .ring { width: 1.25rem; height: 1.25rem; }
+.compact .ring i { width: 0.84rem; height: 0.84rem; }
+.compact .copy strong { font-size: 0.52rem; }
+.compact .copy small { font-size: 0.4rem; }
+.compact time { min-width: 2.15rem; font-size: 0.62rem; }
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .indicator { min-width: 5.4rem; gap: 0.25rem; padding: 0.16rem 0.28rem; border-radius: 0.38rem; }
+  .ring { width: 1rem; height: 1rem; }
+  .ring i { width: 0.68rem; height: 0.68rem; }
+  .copy strong { font-size: 0.42rem; }
+  .copy small { max-width: 3.5rem; font-size: 0.34rem; }
+  .indicator time { min-width: 1.82rem; font-size: 0.5rem; }
+  .pointer { border-width: 0.25rem; }
+  .bottom .pointer { bottom: -0.5rem; }
+  .top .pointer { top: -0.5rem; }
+  .left .pointer { left: -0.5rem; }
+  .right .pointer { right: -0.5rem; }
+}

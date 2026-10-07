@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
+import { formatCompetitiveRank } from "../../competitive/rating";
 import { getRoundInterpretationKey } from "../../game/round-engine";
 import { validateSelectedPlay } from "../../game/play-validation";
 import type { Seat } from "../../game/types";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
 import {
   contextualPrompt,
+  cardShortLabel,
   interpretationLabel,
   playerLabel,
   wildcardDetails,
@@ -17,9 +19,15 @@ import type {
   ClientPlayerView,
 } from "../../shared/multiplayer-protocol";
 import { GameControls } from "../game/GameControls";
+import { LevelStatus } from "../game/LevelStatus";
+import { ConfirmDialog } from "../game/ConfirmDialog";
+import { GameplayOrientationGate } from "../game/GameplayOrientationGate";
 import { PlayerHand } from "../game/PlayerHand";
 import { TrickArea } from "../game/TrickArea";
+import { TurnIndicator } from "../game/TurnIndicator";
+import { useUniformFanLayout } from "../game/useUniformFanLayout";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { CompetitiveRankBadge } from "../competitive/CompetitiveRankBadge";
 import styles from "./OnlineGame.module.css";
 import { UiIcon } from "./UiIcon";
 
@@ -32,9 +40,12 @@ type OnlineGameProps = {
   onPass: () => Promise<boolean>;
   onTribute: (cardId: string) => Promise<boolean>;
   onReturn: (cardId: string) => Promise<boolean>;
+  onOpenRules: () => void;
+  onLeave: () => void;
 };
 
 type TablePosition = "bottom" | "right" | "top" | "left";
+const EMPTY_CARD_IDS: ReadonlySet<string> = new Set();
 
 function visualPosition(seat: Seat, selfSeat: Seat): TablePosition {
   const offset = (seat - selfSeat + 4) % 4;
@@ -46,19 +57,40 @@ function relationship(player: ClientPlayerView, self: ClientGameView["self"]): s
   return player.team === self.team ? "Teammate" : "Opponent";
 }
 
-function OpponentPanel({
+const OpponentPanel = memo(function OpponentPanel({
   player,
   self,
   isCurrent,
+  position,
+  turnDeadlineAt,
 }: {
   player: ClientPlayerView;
   self: ClientGameView["self"];
   isCurrent: boolean;
+  position: TablePosition;
+  turnDeadlineAt: number | null;
 }) {
   const visibleCardBacks = Math.min(player.cardCount, 12);
+  const { containerRef, fanStyle } = useUniformFanLayout(visibleCardBacks, {
+    compact: true,
+    minExposure: 9,
+  });
 
   return (
-    <section className={`${styles.playerSeat} ${isCurrent ? styles.currentSeat : ""}`}>
+    <section
+      className={`${styles.playerSeat} ${isCurrent ? styles.currentSeat : ""}`}
+      aria-label={`${player.name}, ${relationship(player, self)}, ${player.cardCount} cards`}
+    >
+      {isCurrent ? (
+        <div className={styles.opponentTurn}>
+          <TurnIndicator
+            deadlineAt={turnDeadlineAt}
+            owner={player.name}
+            direction={position}
+            compact
+          />
+        </div>
+      ) : null}
       <div className={styles.playerIdentity}>
         <span className={styles.avatar} aria-hidden="true"><UiIcon name="user" /></span>
         <div>
@@ -66,35 +98,49 @@ function OpponentPanel({
           <span className={player.team === "A" ? styles.teamA : styles.teamB}>
             Team {player.team} · {relationship(player, self)}
           </span>
+          <span className={styles.competitiveLine}>
+            {formatCompetitiveRank(player.competitiveRank)} · {player.rating}
+          </span>
         </div>
         <span className={styles.cardCount}>{player.cardCount} cards</span>
       </div>
 
       <div className={styles.seatBadges}>
         {!player.connected ? <span className={styles.disconnected}>Disconnected</span> : null}
-        {isCurrent ? <span className={styles.turnBadge}>Current turn</span> : null}
         {player.finishPosition !== null ? (
           <span className={styles.finishedBadge}>Finished · #{player.finishPosition}</span>
         ) : null}
       </div>
 
-      <div className={styles.cardBackRow} aria-label={`${player.cardCount} hidden cards`}>
-        {Array.from({ length: visibleCardBacks }, (_, index) => (
-          <span key={index} className={styles.cardBack} aria-hidden="true">
-            <span>贯</span>
-          </span>
-        ))}
+      <div ref={containerRef} className={styles.cardBackRow} aria-label={`${player.cardCount} hidden cards`}>
+        <div className={styles.cardBackFan} style={fanStyle}>
+          {Array.from({ length: visibleCardBacks }, (_, index) => (
+            <span
+              key={index}
+              className={styles.cardBackSlot}
+              data-fan-card={index === 0 ? "" : undefined}
+              style={{ left: `calc(${index} * var(--fan-step, 1.1rem))` }}
+              aria-hidden="true"
+            >
+              <span className={styles.cardBack}><span>贯</span></span>
+            </span>
+          ))}
+        </div>
       </div>
     </section>
   );
-}
+});
 
 function OnlineHeader({
   view,
   status,
+  onOpenRules,
+  onLeave,
 }: {
   view: ClientGameView;
   status: OnlineConnectionStatus;
+  onOpenRules: () => void;
+  onLeave: () => void;
 }) {
   return (
     <header className={styles.topBar}>
@@ -110,11 +156,16 @@ function OnlineHeader({
 
       <div className={styles.metrics} aria-label="Match status">
         <span><small>Round</small><strong>{view.roundNumber}</strong></span>
-        <span className={styles.levelMetric}><small>Current level</small><strong>{view.currentLevelRank}</strong></span>
-        <span><small>Team A</small><strong>Level {view.teamLevels.A}</strong></span>
-        <span><small>Team B</small><strong>Level {view.teamLevels.B}</strong></span>
+        <LevelStatus
+          currentLevelRank={view.currentLevelRank}
+          activeLevelTeam={view.activeLevelTeam}
+          teamLevels={view.teamLevels}
+          compact
+        />
       </div>
 
+      <button type="button" className={styles.rulesButton} onClick={onOpenRules}>Rules</button>
+      <button type="button" className={styles.leaveButton} onClick={onLeave}>← Leave Table</button>
       <ConnectionBadge status={status} />
     </header>
   );
@@ -128,7 +179,17 @@ function ExchangePanel({
 }: Pick<OnlineGameProps, "view" | "errorMessage" | "onTribute" | "onReturn">) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const exchange = view.exchange;
-  const legalIds = new Set(exchange?.legalCardIds ?? []);
+  const legalIds = useMemo(
+    () => new Set(exchange?.legalCardIds ?? []),
+    [exchange?.legalCardIds],
+  );
+  const selectedIds = useMemo(
+    () => new Set(selectedCardId ? [selectedCardId] : []),
+    [selectedCardId],
+  );
+  const toggleExchangeCard = useCallback((cardId: string) => {
+    setSelectedCardId((current) => current === cardId ? null : cardId);
+  }, []);
   const canAct = exchange?.action === "TRIBUTE" || exchange?.action === "RETURN";
   const actorNames = exchange?.actorSeats
     .map((seat) => view.players[seat]?.name ?? playerLabel(seat))
@@ -165,9 +226,12 @@ function ExchangePanel({
           currentLevelRank={view.currentLevelRank}
           isCurrent={canAct}
           finishPosition={view.players[view.self.seat]?.finishPosition ?? null}
-          selectedCardIds={new Set(selectedCardId ? [selectedCardId] : [])}
+          selectedCardIds={selectedIds}
           interactiveCardIds={legalIds}
-          onToggleCard={canAct ? (cardId) => setSelectedCardId((current) => current === cardId ? null : cardId) : undefined}
+          fullSizeCards
+          appearance="primary"
+          reorderable
+          onToggleCard={canAct ? toggleExchangeCard : undefined}
         />
       </div>
 
@@ -195,9 +259,18 @@ export function OnlineGame({
   onPass,
   onTribute,
   onReturn,
+  onOpenRules,
+  onLeave,
 }: OnlineGameProps) {
-  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
-  const [selectedInterpretationKey, setSelectedInterpretationKey] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    turnSequence: number;
+    cardIds: Set<string>;
+    interpretationKey: string | null;
+  }>(() => ({ turnSequence: view.turnSequence, cardIds: new Set(), interpretationKey: null }));
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const selectionIsCurrent = selection.turnSequence === view.turnSequence;
+  const selectedCardIds = selectionIsCurrent ? selection.cardIds : EMPTY_CARD_IDS;
+  const selectedInterpretationKey = selectionIsCurrent ? selection.interpretationKey : null;
   const isOwnTurn =
     view.matchPhase === "ROUND_IN_PROGRESS" && view.currentTurn === view.self.seat;
   const selectedCards = useMemo(
@@ -227,6 +300,11 @@ export function OnlineGame({
     validation?.status === "LEGAL" &&
     (interpretations.length === 1 || selectedInterpretationValid) &&
     connectionStatus === "CONNECTED";
+  const playLabel = validation?.status === "LEGAL"
+    ? interpretations.find((interpretation) => interpretation.key === selectedInterpretationKey)?.label
+      ?? interpretations[0]?.label
+      ?? null
+    : null;
 
   let selectionMessage = "Select cards from your hand.";
   let selectionTone: "neutral" | "valid" | "invalid" | "choice" = "neutral";
@@ -247,15 +325,41 @@ export function OnlineGame({
     selectionTone = "valid";
   }
 
+  const toggleCard = useCallback((cardId: string) => {
+    onClearError();
+    setSelection((current) => {
+      const next = new Set(
+        current.turnSequence === view.turnSequence ? current.cardIds : [],
+      );
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return { turnSequence: view.turnSequence, cardIds: next, interpretationKey: null };
+    });
+  }, [onClearError, view.turnSequence]);
+
+  const interactiveCardIds = useMemo(
+    () => isOwnTurn ? new Set(view.ownHand.map((card) => card.id)) : undefined,
+    [isOwnTurn, view.ownHand],
+  );
+
   if (view.matchPhase === "PRE_ROUND_EXCHANGE") {
     return (
       <div className={styles.gameShell}>
-        <OnlineHeader view={view} status={connectionStatus} />
+        <OnlineHeader view={view} status={connectionStatus} onOpenRules={onOpenRules} onLeave={() => setLeaveOpen(true)} />
         <ExchangePanel
           view={view}
           errorMessage={errorMessage}
           onTribute={onTribute}
           onReturn={onReturn}
+        />
+        <GameplayOrientationGate />
+        <ConfirmDialog
+          open={leaveOpen}
+          title="Leave this match?"
+          message="Leaving will end the current match for this room."
+          confirmLabel="Leave Match"
+          onCancel={() => setLeaveOpen(false)}
+          onConfirm={onLeave}
         />
       </div>
     );
@@ -269,40 +373,27 @@ export function OnlineGame({
     ? "the next player"
     : view.players[view.currentTurn]?.name ?? playerLabel(view.currentTurn);
 
-  function toggleCard(cardId: string) {
-    onClearError();
-    setSelectedInterpretationKey(null);
-    setSelectedCardIds((current) => {
-      const next = new Set(current);
-      if (next.has(cardId)) next.delete(cardId);
-      else next.add(cardId);
-      return next;
-    });
-  }
-
   async function play() {
     if (!canPlay) return;
     const accepted = await onPlay(
-      [...selectedCardIds],
+      selectedCards.map((card) => card.id),
       interpretations.length > 1 ? selectedInterpretationKey ?? undefined : undefined,
     );
     if (accepted) {
-      setSelectedCardIds(new Set());
-      setSelectedInterpretationKey(null);
+      setSelection({ turnSequence: view.turnSequence, cardIds: new Set(), interpretationKey: null });
     }
   }
 
   async function pass() {
     const accepted = await onPass();
     if (accepted) {
-      setSelectedCardIds(new Set());
-      setSelectedInterpretationKey(null);
+      setSelection({ turnSequence: view.turnSequence, cardIds: new Set(), interpretationKey: null });
     }
   }
 
   return (
     <div className={styles.gameShell}>
-      <OnlineHeader view={view} status={connectionStatus} />
+      <OnlineHeader view={view} status={connectionStatus} onOpenRules={onOpenRules} onLeave={() => setLeaveOpen(true)} />
       <main className={styles.tableFrame}>
         <div className={styles.tableSurface}>
           <div className={styles.cloudMotif} aria-hidden="true">云</div>
@@ -323,6 +414,8 @@ export function OnlineGame({
                   player={player}
                   self={view.self}
                   isCurrent={view.currentTurn === player.seat}
+                  position={position}
+                  turnDeadlineAt={view.turnDeadlineAt}
                 />
               </div>
             );
@@ -346,14 +439,20 @@ export function OnlineGame({
                 selectedInterpretationKey={selectedInterpretationKey}
                 canPlay={canPlay}
                 canPass={view.currentPlay !== null && connectionStatus === "CONNECTED"}
-                selectedCount={selectedCardIds.size}
+                selectedCount={selectedCards.length}
+                selectedLabels={selectedCards.map(cardShortLabel)}
+                playLabel={playLabel}
+                turnDeadlineAt={view.turnDeadlineAt}
                 errorMessage={errorMessage}
-                onSelectInterpretation={setSelectedInterpretationKey}
+                onSelectInterpretation={(key) => setSelection((current) => ({
+                  turnSequence: view.turnSequence,
+                  cardIds: new Set(current.turnSequence === view.turnSequence ? current.cardIds : []),
+                  interpretationKey: key,
+                }))}
                 onPlay={() => void play()}
                 onPass={() => void pass()}
                 onClear={() => {
-                  setSelectedCardIds(new Set());
-                  setSelectedInterpretationKey(null);
+                  setSelection({ turnSequence: view.turnSequence, cardIds: new Set(), interpretationKey: null });
                   onClearError();
                 }}
               />
@@ -377,15 +476,26 @@ export function OnlineGame({
                 isCurrent={isOwnTurn}
                 finishPosition={selfPlayer.finishPosition}
                 selectedCardIds={selectedCardIds}
-                interactiveCardIds={isOwnTurn ? new Set(view.ownHand.map((card) => card.id)) : undefined}
+                interactiveCardIds={interactiveCardIds}
                 revealedCardId={view.firstRoundRevealedCardId ?? undefined}
                 fullSizeCards
+                appearance="primary"
+                reorderable
                 onToggleCard={isOwnTurn ? toggleCard : undefined}
               />
             ) : null}
           </div>
         </div>
       </main>
+      <GameplayOrientationGate />
+      <ConfirmDialog
+        open={leaveOpen}
+        title="Leave this match?"
+        message="Leaving will end the current match for this room."
+        confirmLabel="Leave Match"
+        onCancel={() => setLeaveOpen(false)}
+        onConfirm={onLeave}
+      />
     </div>
   );
 }
@@ -397,6 +507,7 @@ export function OnlineMatchComplete({
   view: ClientMatchCompleteView;
   onReturnHome: () => void;
 }) {
+  const rating = view.ratingResult;
   return (
     <main className={styles.completePage}>
       <section className={styles.completeCard}>
@@ -409,10 +520,60 @@ export function OnlineMatchComplete({
           <i aria-hidden="true" />
           <div><span>Team B</span><strong>Level {view.teamLevels.B}</strong></div>
         </div>
+        <section className={styles.ratingResult} aria-label="Competitive Rating result">
+          <div>
+            <span>Your competitive result</span>
+            <CompetitiveRankBadge rank={rating.rankAfter} compact />
+          </div>
+          <p>
+            <strong>{rating.before}</strong>
+            <span aria-hidden="true">→</span>
+            <strong>{rating.after}</strong>
+            <b className={rating.delta >= 0 ? styles.ratingGain : styles.ratingLoss}>
+              {rating.delta >= 0 ? "+" : ""}{rating.delta}
+            </b>
+          </p>
+          {rating.rankUp ? (
+            <div className={styles.rankUp}>
+              <span>Rank Up</span>
+              <strong>
+                {formatCompetitiveRank(rating.rankBefore)} → {formatCompetitiveRank(rating.rankAfter)}
+              </strong>
+            </div>
+          ) : null}
+        </section>
         <button type="button" className={styles.returnButton} onClick={onReturnHome}>
           Return Home <UiIcon name="arrow" />
         </button>
       </section>
+      <GameplayOrientationGate />
+    </main>
+  );
+}
+
+export function OnlineCancelledMatch({
+  message,
+  onReturnHome,
+}: {
+  message: string;
+  onReturnHome: () => void;
+}) {
+  return (
+    <main className={styles.completePage}>
+      <section className={`${styles.completeCard} ${styles.cancelledCard}`}>
+        <div className={styles.cancelledEmblem} aria-hidden="true">×</div>
+        <span className={styles.kicker}>Match cancelled</span>
+        <h1>No Rating Change</h1>
+        <p>{message}</p>
+        <div className={styles.noRatingChange}>
+          <strong>Rating protected</strong>
+          <span>Only authoritative four-human Match Complete results affect competitive Rating.</span>
+        </div>
+        <button type="button" className={styles.returnButton} onClick={onReturnHome}>
+          Return Home <UiIcon name="arrow" />
+        </button>
+      </section>
+      <GameplayOrientationGate />
     </main>
   );
 }

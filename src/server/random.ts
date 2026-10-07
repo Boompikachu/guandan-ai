@@ -8,6 +8,7 @@ export type ServerRandomSource = {
   generatePlayerToken: () => string;
   shuffle: <T>(values: readonly T[]) => T[];
   choose: <T>(values: readonly T[]) => T;
+  rollDie: () => number;
 };
 
 export function generateRoomCode(): string {
@@ -43,10 +44,14 @@ export function secureChoice<T>(values: readonly T[]): T {
   return value;
 }
 
+export function secureRollDie(): number {
+  return randomInt(1, 7);
+}
+
 export const secureServerRandom: ServerRandomSource = {
   generateRoomCode,
   generatePlayerToken,
   shuffle: secureShuffle,
   choose: secureChoice,
+  rollDie: secureRollDie,
 };
-

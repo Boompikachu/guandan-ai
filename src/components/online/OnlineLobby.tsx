@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatCompetitiveRank } from "../../competitive/rating";
 import type { Seat } from "../../game/types";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
 import type { ClientLobbyView } from "../../shared/multiplayer-protocol";
@@ -14,6 +15,8 @@ type OnlineLobbyProps = {
   errorMessage: string | null;
   onSetReady: (ready: boolean) => Promise<boolean>;
   onStart: () => Promise<boolean>;
+  onOpenRules: () => void;
+  onLeave: () => void;
 };
 
 function visualPosition(seat: Seat, selfSeat: Seat): "bottom" | "right" | "top" | "left" {
@@ -27,6 +30,8 @@ export function OnlineLobby({
   errorMessage,
   onSetReady,
   onStart,
+  onOpenRules,
+  onLeave,
 }: OnlineLobbyProps) {
   const [copied, setCopied] = useState(false);
   const self = view.players[view.self.seat];
@@ -45,10 +50,12 @@ export function OnlineLobby({
           <span className={styles.brandMark} aria-hidden="true">掼</span>
           <div>
             <h1>Guandan Go</h1>
-            <span>Private table lobby</span>
+            <span>Table lobby</span>
           </div>
         </div>
         <div className={styles.roomBar}>
+          <button type="button" className={styles.leaveButton} onClick={onLeave}>← Leave Table</button>
+          <button type="button" className={styles.rulesButton} onClick={onOpenRules}>Rules</button>
           <div className={styles.roomCode} aria-label={`Room code ${view.roomCode}`}>
             <span>Room</span>
             <strong>{view.roomCode}</strong>
@@ -93,6 +100,9 @@ export function OnlineLobby({
                       <>
                         <strong>{player.name}{isSelf ? " · You" : ""}</strong>
                         <span>Team {player.team}{isSelf ? " · Your seat" : ""}</span>
+                        <span className={styles.competitiveLine}>
+                          {formatCompetitiveRank(player.competitiveRank)} · {player.rating}
+                        </span>
                         <div className={styles.badges}>
                           {player.isHost ? <span className={`${styles.badge} ${styles.badgeGold}`}>Host</span> : null}
                           <span className={`${styles.badge} ${player.ready ? styles.badgeReady : ""}`}>

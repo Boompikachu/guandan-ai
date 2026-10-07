@@ -13,7 +13,7 @@ import {
 } from "./local-match-session";
 
 describe("local match randomness adapter", () => {
-  it("creates a playable local match with an injected random source", () => {
+  it("creates a playable local match with an explicit non-holder opening seat", () => {
     const result = createLocalMatch(() => 0.25);
 
     expect(result.success).toBe(true);
@@ -23,14 +23,13 @@ describe("local match randomness adapter", () => {
     expect(result.state.roundState.hands.map((hand) => hand.length)).toEqual([
       27, 27, 27, 27,
     ]);
-    const holder = result.state.roundState.currentTurn;
-    expect(holder).not.toBeNull();
-    if (holder === null) return;
-    expect(
-      result.state.roundState.hands[holder].some(
-        (card) => card.id === result.state.firstRoundRevealedCardId,
-      ),
-    ).toBe(true);
+    expect(result.state.roundState.currentTurn).toBe(1);
+    expect(result.state.roundState.hands[0].some(
+      (card) => card.id === result.state.firstRoundRevealedCardId,
+    )).toBe(true);
+    expect(result.state.roundState.hands[1].some(
+      (card) => card.id === result.state.firstRoundRevealedCardId,
+    )).toBe(false);
   });
 
   it("creates deterministic complete shuffled decks without mutating card identity", () => {

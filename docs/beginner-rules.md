@@ -151,6 +151,12 @@ Once a player successfully plays all cards from their hand, they are finished: t
 
 When all other active players have Passed and nobody beats the current highest play, the trick ends. The player who made the current highest play wins the trick. If the round is already complete after finishing positions are determined, proceed to round-end processing without starting another trick. Otherwise, if that play was the winning final play of a player who has finished, that player's teammate leads the next trick. In all other cases, the player who made the current highest play leads. The new trick begins with no previous combination to beat, so its leader may open with any legal combination.
 
+### Playing-turn time limit
+
+Each normal card-playing turn has 60 seconds. In Online Multiplayer the server owns one absolute deadline for the current turn; refreshing, reconnecting, changing focus, selecting cards, clearing cards, moving the pointer, or opening Rules does not reset it. This timer does not apply to the opening Dice/Flip ceremony, Tutorial onboarding, Tribute, or Return Tribute.
+
+When a responding turn expires, the server submits Pass through the ordinary round engine. When a fresh-trick leader expires, Pass remains illegal, so the server deterministically submits the weakest owned Single that passes ordinary engine validation. A timeout never changes the rules to permit an illegal Pass. Each deadline belongs to one server turn sequence, so an expired old timeout and a late client action cannot both commit.
+
 Example: Player A plays Pair 7, Player B plays Pair 9, Player C passes, Player D plays Pair J, then Players A, B, and C pass. Player D's Pair J is the current highest play, so Player D wins the trick and leads the next trick with any legal combination.
 
 Bombs follow the same trick-winning principle. For example, if Player A plays Pair Q, Player B plays Pair K, and Player C plays the four-card Bomb `7777`, then Player D, Player A, and Player B pass, Player C's Bomb is the current highest play. Player C wins the trick and leads the next one.
@@ -276,19 +282,36 @@ All successful exchanges move the actual selected physical card object, preservi
 
 ## 13. First-Round Lead
 
-For the first round only, after the deck is shuffled, one physical card among the 108 cards is randomly designated as the revealed starting card. Cards are then dealt normally. The player who receives the designated card leads the first trick. The card remains in that player's hand and is not removed from play. The UI may visually reveal or highlight the card during the dealing sequence.
+Round 1 uses one opening ceremony before anyone receives a hand:
+
+1. Create and shuffle the normal 108-card physical deck.
+2. All four participants roll two six-sided dice.
+3. The participant with the unique highest total becomes the **Flipper**.
+4. If two or more participants tie for the highest total, only those tied-highest participants reroll two dice. Everyone else is eliminated from the dice contest. Repeated ties repeat this same tied-highest-only reroll until there is one Flipper.
+5. The Flipper reveals the top physical card of the still-undealt deck.
+6. Resolve the Round-1 starting seat from the Flipper and the revealed card.
+7. Only after the starting seat is known, deal that same complete deck: 27 physical cards to each participant.
+8. The resolved starting player leads the first trick.
+
+For an ordinary rank, use its **printed rank** as the opening count: A is 1; 2 through 10 use the printed number; J is 11; Q is 12; and K is 13. Current Level promotion never changes this count. Count clockwise beginning with the Flipper as 1, using authoritative seat order `0 → 1 → 2 → 3 → 0`. Equivalently, `startingSeat = (flipperSeat + value - 1) mod 4`.
+
+Small Joker and Big Joker both mean **yourself**. A Joker has no numeric opening value: when either Joker is revealed, the Flipper starts Round 1.
+
+The revealed card remains one of the original 108 physical cards. It is never removed, duplicated, or replaced, and it is included when the complete deck is dealt. Its eventual recipient is irrelevant to the starting-seat decision. The opening procedure creates no 109th card.
+
+Dice and the opening flip occur only once per match. Round 2 and later use the existing Tribute, Anti-Tribute, Return-Tribute, and resulting starting-seat rules described above.
 
 ### Match Lifecycle Orchestration
 
 The pure match orchestrator connects dealing, round play, progression, and pre-round exchange without duplicating their rules. Its lifecycle states are `ROUND_IN_PROGRESS`, `AWAITING_NEXT_ROUND_DECK`, `PRE_ROUND_EXCHANGE`, and `MATCH_COMPLETE`.
 
-The caller supplies each already-shuffled 108-card physical deck. For the first round, the caller also supplies the revealed physical card ID. The orchestrator validates the complete two-deck composition, deals through the deck helper, finds the revealed card's holder by physical ID, preserves that ID as informational match metadata, and creates the first `RoundState` using `MatchState.currentLevelRank`. The first round never runs Tribute or Anti-Tribute.
+The Round-1 Dice → Flip → Determine Starter ceremony happens before the pure match orchestrator is created. Its caller preserves the pending shuffled deck, resolves the Flipper and starting seat, and then supplies that same 108-card deck together with the revealed physical card ID and already-resolved `startingSeat`. The orchestrator validates the complete two-deck composition and revealed card, deals through the deck helper, preserves the reveal ID as informational match metadata, and creates the first `RoundState` using the supplied starting seat and `MatchState.currentLevelRank`. It never derives the starter from the revealed card's eventual holder. The first round never runs Tribute or Anti-Tribute.
 
 While a round is active, match actions delegate directly to the round engine. When the round engine produces a completed `RoundOutcome`, the orchestrator immediately passes it to match progression. A completed match transitions directly to `MATCH_COMPLETE`. Otherwise, the orchestrator waits for the caller to supply the next shuffled deck; it does not create the pre-round exchange before that deck arrives.
 
 After a later-round deck is supplied and dealt, the orchestrator initializes the pre-round exchange with the previous `RoundOutcome`, the newly dealt hands, and the updated `MatchState.currentLevelRank`. If Anti-Tribute completes that exchange immediately, the orchestrator creates the next `RoundState` without exposing an unnecessary interactive exchange phase. Otherwise, it delegates explicit Tribute, Return-Tribute, equal-card recipient, and equal-card leader actions to the pre-round state machine until completion.
 
-The round number begins at 1 and increments only when a completed pre-round exchange creates the next active `RoundState`; it does not increment while waiting for a deck or during an exchange. All randomness remains outside the orchestrator, including deck order, the first-round revealed card, and both equal-Tribute resolutions. The orchestrator does not call `Math.random()` or silently resolve a tie.
+The round number begins at 1 and increments only when a completed pre-round exchange creates the next active `RoundState`; it does not increment while waiting for a deck or during an exchange. All randomness remains outside the orchestrator, including deck order, Round-1 dice, and both equal-Tribute resolutions. The orchestrator does not call `Math.random()` or silently resolve a tie.
 
 ## 14. Beginner Experience and Contextual Teaching
 

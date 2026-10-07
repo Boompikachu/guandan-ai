@@ -1,0 +1,65 @@
+.backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 78%);
+  backdrop-filter: blur(10px);
+}
+
+.dialog {
+  width: min(100%, 29rem);
+  padding: 1.6rem;
+  border: 1px solid rgb(229 188 107 / 48%);
+  border-radius: 1rem;
+  color: #eae2d0;
+  background: linear-gradient(145deg, #12191c, #05090b);
+  box-shadow: 0 2rem 7rem rgb(0 0 0 / 70%), inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.kicker {
+  color: #d3ad60;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dialog h2 {
+  margin: 0.55rem 0 0;
+  color: #f3dfb2;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+}
+
+.dialog p {
+  margin: 0.7rem 0 0;
+  color: #9faaa7;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.3rem;
+}
+
+.actions button {
+  min-height: 2.75rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgb(229 188 107 / 28%);
+  border-radius: 0.6rem;
+  color: #dcc792;
+  background: rgb(255 255 255 / 4%);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.actions .danger {
+  border-color: rgb(198 75 64 / 65%);
+  color: #ffe4de;
+  background: linear-gradient(180deg, #8b302a, #571d19);
+}

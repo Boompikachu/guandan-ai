@@ -9,6 +9,7 @@ import {
 } from "../game/match-engine";
 import type { MatchState } from "../game/match-state";
 import type { RoundOutcome } from "../game/round-state";
+import type { Card, Seat } from "../game/types";
 
 export type RandomSource = () => number;
 
@@ -43,6 +44,20 @@ export function chooseRandomCandidate<T>(
 
 export function createRandomDeck(random: RandomSource): ReturnType<typeof createDeck> {
   return shuffleDeck(createDeck(), () => boundedRandom(random));
+}
+
+function getLocalOpeningStartingSeat(card: Card, flipperSeat: Seat = 0): Seat {
+  if (card.kind === "JOKER") return flipperSeat;
+  const value = card.rank === "A"
+    ? 1
+    : card.rank === "J"
+      ? 11
+      : card.rank === "Q"
+        ? 12
+        : card.rank === "K"
+          ? 13
+          : Number(card.rank);
+  return ((flipperSeat + value - 1) % 4) as Seat;
 }
 
 function formatInitializationError(error: MatchEngineInitializationError): string {
@@ -233,7 +248,7 @@ export function createLocalMatch(
   random: RandomSource = Math.random,
 ): LocalMatchStartResult {
   const shuffledDeck = createRandomDeck(random);
-  const revealedCard = chooseRandomCandidate(shuffledDeck, random);
+  const revealedCard = shuffledDeck[0];
   if (!revealedCard) {
     return {
       success: false,
@@ -245,6 +260,7 @@ export function createLocalMatch(
   const result = createMatchEngineState({
     shuffledDeck,
     revealedCardId: revealedCard.id,
+    startingSeat: getLocalOpeningStartingSeat(revealedCard),
   });
   if (!result.success) {
     return {
@@ -257,7 +273,7 @@ export function createLocalMatch(
   return {
     success: true,
     state: result.state,
-    events: [`Player ${(result.state.roundState.currentTurn ?? 0) + 1} received the revealed card and leads.`],
+    events: [`Player ${(result.state.roundState.currentTurn ?? 0) + 1} leads from the revealed opening card.`],
   };
 }
 

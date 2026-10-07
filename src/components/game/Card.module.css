@@ -5,6 +5,8 @@
   height: 6.45rem;
   padding: 0.38rem;
   overflow: hidden;
+  isolation: isolate;
+  contain: paint;
   border: 1px solid #c8bda8;
   border-radius: 0.62rem;
   flex: 0 0 auto;
@@ -19,6 +21,7 @@
   cursor: default;
   transform-origin: 50% 100%;
   user-select: none;
+  touch-action: pan-x;
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, filter 140ms ease;
 }
 
@@ -32,7 +35,7 @@
 }
 
 .card:disabled {
-  opacity: 0.72;
+  opacity: 1;
 }
 
 .interactive {
@@ -47,14 +50,13 @@
 
 .selected,
 .interactive.selected:hover {
-  z-index: 50;
   border-color: #f1cf82;
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 84%),
     0 0 0 2px rgb(229 188 107 / 72%),
     0 0 1.25rem rgb(229 188 107 / 54%),
     0 1rem 1.6rem rgb(0 0 0 / 42%);
-  transform: translateY(-1rem);
+  transform: translateY(-1.25rem);
 }
 
 .wildcard {
@@ -80,58 +82,258 @@
   border-radius: 0.5rem;
 }
 
-.rank {
+.normalFace {
   position: absolute;
   z-index: 1;
-  top: 0.34rem;
-  left: 0.38rem;
-  font-family: var(--font-display);
-  font-size: 1.08rem;
-  font-weight: 800;
-  line-height: 1;
+  inset: 0;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
 }
 
-.suit {
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-size: 2rem;
-  filter: drop-shadow(0 1px rgb(255 255 255 / 80%));
+.black {
+  color: #101416;
+}
+
+.cornerIndex {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  width: 1.15rem;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.8;
+  text-shadow: 0 1px rgb(255 255 255 / 70%);
+}
+
+.cornerIndex strong {
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.cornerIndex i {
+  margin-top: 0.13rem;
+  font-size: 0.78rem;
+  font-style: normal;
+}
+
+.topIndex {
+  top: 0.32rem;
+  left: 0.2rem;
+}
+
+.bottomIndex {
+  right: 0.2rem;
+  bottom: 0.32rem;
+  transform: rotate(180deg);
 }
 
 .red {
-  color: #aa2828;
+  color: #b0202c;
 }
 
-.jokerMark {
-  align-self: start;
-  color: #a6752d;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
+.pipField {
+  position: absolute;
+  inset: 0.72rem 0.65rem;
 }
 
-.jokerName {
+.pipField > i {
+  position: absolute;
+  top: var(--pip-y);
+  left: var(--pip-x);
+  font-size: 1.03rem;
+  font-style: normal;
+  line-height: 1;
+  filter: drop-shadow(0 1px rgb(255 255 255 / 70%));
+  transform: translate(-50%, -50%);
+}
+
+.pipField > .invertedPip {
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.aceField > i {
+  font-size: 2.45rem;
+  filter: drop-shadow(0 0.12rem 0 rgb(129 93 49 / 16%));
+}
+
+.courtFace {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 2.38rem;
+  height: 3.45rem;
+  grid-template-rows: auto 1fr auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(173 125 55 / 62%);
+  border-radius: 0.3rem;
+  background:
+    linear-gradient(135deg, transparent 43%, rgb(189 143 72 / 18%) 44% 56%, transparent 57%),
+    linear-gradient(45deg, rgb(25 29 30 / 5%), transparent 55%);
+  box-shadow: inset 0 0 0 0.16rem rgb(255 255 255 / 35%);
+  transform: translate(-50%, -50%);
+}
+
+.courtFace::before,
+.courtFace::after {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid currentColor;
+  content: "";
+  opacity: 0.14;
+  transform: rotate(45deg);
+}
+
+.courtFace strong {
   z-index: 1;
   align-self: center;
-  justify-self: center;
-  color: #28231b;
+  color: currentColor;
+  font-size: 2.15rem;
+  line-height: 1;
+  text-shadow: 1px 1px #fff7e7, -1px -1px #fff7e7;
+}
+
+.courtFace i {
+  z-index: 1;
+  font-size: 0.88rem;
+  font-style: normal;
+}
+
+.courtFace i:last-child {
+  transform: rotate(180deg);
+}
+
+.jokerFace {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  color: var(--joker-ink);
+  background:
+    radial-gradient(circle at 56% 44%, var(--joker-wash), transparent 44%),
+    repeating-linear-gradient(35deg, rgb(120 95 55 / 2%) 0 1px, transparent 1px 4px),
+    linear-gradient(155deg, #fffdf7, #e9dfcc);
+}
+
+.jokerFace::after {
+  position: absolute;
+  inset: 0.28rem;
+  border: 1px solid color-mix(in srgb, var(--joker-ink) 30%, #bb8b3c);
+  border-radius: 0.34rem;
+  content: "";
+}
+
+.bigJoker {
+  --joker-ink: #b51f2e;
+  --joker-wash: rgb(181 31 46 / 17%);
+  --joker-shadow: rgb(122 13 27 / 22%);
+}
+
+.smallJoker {
+  --joker-ink: #15191d;
+  --joker-wash: rgb(20 25 30 / 13%);
+  --joker-shadow: rgb(0 0 0 / 18%);
+}
+
+.jokerCorner {
+  position: absolute;
+  z-index: 2;
+  top: 0.3rem;
+  left: 0.3rem;
+  display: flex;
+  width: 1.05rem;
+  flex-direction: column;
+  align-items: center;
+  color: var(--joker-ink);
+  line-height: 0.78;
+  filter: drop-shadow(0 1px rgb(255 255 255 / 72%));
+}
+
+.jokerCorner strong {
   font-family: var(--font-display);
-  font-size: 0.66rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 1.12rem;
+  font-weight: 900;
+}
+
+.jokerCorner span {
+  font-family: var(--font-display);
+  font-size: 0.44rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
   writing-mode: vertical-rl;
 }
 
-.deck {
+.jokerCorner small {
+  margin-top: 0.12rem;
+  padding-top: 0.13rem;
+  border-top: 1px solid currentColor;
+  font-size: 0.29rem;
+  font-weight: 1000;
+  letter-spacing: 0.05em;
+}
+
+.jokerEmblem {
   position: absolute;
-  z-index: 1;
-  right: 0.3rem;
-  bottom: 0.28rem;
-  color: #81786c;
-  font-size: 0.5rem;
+  top: 50%;
+  left: 53%;
+  width: 2.7rem;
+  height: 3.3rem;
+  fill: none;
+  stroke: var(--joker-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  filter: drop-shadow(0 0.25rem 0.18rem var(--joker-shadow));
+  transform: translate(-50%, -53%);
+}
+
+.jesterHat {
+  fill: var(--joker-wash);
+  stroke-width: 2.2;
+}
+
+.jesterFace {
+  fill: rgb(255 253 246 / 72%);
+  stroke-width: 2.2;
+}
+
+.jesterCollar {
+  fill: var(--joker-wash);
+  stroke-width: 2.2;
+}
+
+.jokerWord {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.22rem;
+  color: var(--joker-ink);
+  font-family: var(--font-display);
+  font-size: 0.48rem;
   font-weight: 900;
+  letter-spacing: 0.13em;
+  opacity: 0.72;
+  writing-mode: vertical-rl;
+}
+
+.jokerTitle {
+  position: absolute;
+  right: 0.38rem;
+  bottom: 0.45rem;
+  max-width: 3rem;
+  color: var(--joker-ink);
+  font-family: var(--font-display);
+  font-size: 0.38rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+  text-align: right;
+}
+
+.deck {
+  display: none;
 }
 
 .badge,
@@ -164,7 +366,7 @@
 }
 
 .selectedMark {
-  right: 0.22rem;
+  left: 50%;
   bottom: 0.22rem;
   display: grid;
   width: 1.05rem;
@@ -174,17 +376,23 @@
   color: #151109;
   border-radius: 50%;
   background: #e8c475;
+  transform: translateX(-50%);
 }
 
-.compact .rank {
-  top: 0.27rem;
-  left: 0.3rem;
-  font-size: 0.82rem;
+.compact .cornerIndex {
+  width: 0.86rem;
 }
 
-.compact .suit {
-  font-size: 1.45rem;
-}
+.compact .cornerIndex strong { font-size: 0.82rem; }
+.compact .cornerIndex i { margin-top: 0.08rem; font-size: 0.58rem; }
+.compact .topIndex { top: 0.25rem; left: 0.14rem; }
+.compact .bottomIndex { right: 0.14rem; bottom: 0.25rem; }
+.compact .pipField { inset: 0.55rem 0.45rem; }
+.compact .pipField > i { font-size: 0.76rem; }
+.compact .aceField > i { font-size: 1.78rem; }
+.compact .courtFace { width: 1.8rem; height: 2.65rem; }
+.compact .courtFace strong { font-size: 1.55rem; }
+.compact .courtFace i { font-size: 0.65rem; }
 
 @media (max-width: 760px) {
   .card {
@@ -199,8 +407,59 @@
 
   .selected,
   .interactive.selected:hover {
-    transform: translateY(-0.72rem);
+    transform: translateY(-1.2rem);
   }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .card {
+    width: 3.15rem;
+    height: 4.45rem;
+    padding: 0.25rem;
+    border-radius: 0.4rem;
+  }
+
+  .compact {
+    width: 1.9rem;
+    height: 2.7rem;
+    padding: 0.16rem;
+  }
+
+  .cornerIndex { width: 0.8rem; }
+  .cornerIndex strong { font-size: 0.76rem; }
+  .cornerIndex i { margin-top: 0.08rem; font-size: 0.54rem; }
+  .topIndex { top: 0.2rem; left: 0.12rem; }
+  .bottomIndex { right: 0.12rem; bottom: 0.2rem; }
+  .pipField { inset: 0.45rem 0.38rem; }
+  .pipField > i { font-size: 0.7rem; }
+  .aceField > i { font-size: 1.5rem; }
+  .courtFace { width: 1.62rem; height: 2.38rem; }
+  .courtFace strong { font-size: 1.42rem; }
+  .compact .cornerIndex { width: 0.58rem; }
+  .compact .cornerIndex strong { font-size: 0.55rem; }
+  .compact .cornerIndex i { margin-top: 0.04rem; font-size: 0.38rem; }
+  .compact .topIndex { top: 0.12rem; left: 0.07rem; }
+  .compact .bottomIndex { right: 0.07rem; bottom: 0.12rem; }
+  .compact .pipField > i { font-size: 0.43rem; }
+  .compact .aceField > i { font-size: 1rem; }
+  .compact .courtFace { width: 1rem; height: 1.45rem; }
+  .compact .courtFace strong { font-size: 0.88rem; }
+  .compact .courtFace i { font-size: 0.4rem; }
+  .selected,
+  .interactive.selected:hover { transform: translateY(-1.15rem); }
+  .jokerCorner { top: 0.16rem; left: 0.15rem; width: 0.76rem; }
+  .jokerCorner strong { font-size: 0.82rem; }
+  .jokerCorner span { font-size: 0.31rem; }
+  .jokerCorner small { margin-top: 0.07rem; padding-top: 0.08rem; font-size: 0.2rem; }
+  .jokerEmblem { width: 1.85rem; height: 2.25rem; }
+  .jokerWord { top: 0.42rem; right: 0.12rem; font-size: 0.34rem; }
+  .jokerTitle { display: none; }
+  .compact .jokerCorner { top: 0.1rem; left: 0.09rem; width: 0.52rem; }
+  .compact .jokerCorner strong { font-size: 0.58rem; }
+  .compact .jokerCorner span { font-size: 0.22rem; }
+  .compact .jokerCorner small { display: none; }
+  .compact .jokerEmblem { left: 55%; width: 1.25rem; height: 1.55rem; }
+  .compact .jokerWord { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

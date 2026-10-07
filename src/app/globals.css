@@ -3,18 +3,24 @@
 :root {
   --ink-black: #050a0c;
   --lacquer-black: #091114;
-  --felt-deep: #003b31;
-  --felt-light: #075b49;
   --antique-gold: #b98a43;
   --warm-gold: #e5bc6b;
   --ivory: #f3ead7;
   --cinnabar: #a83b32;
+  --room-ink: #05070a;
+  --room-lacquer: #0d1115;
+  --room-blue-black: #111820;
+  --room-brown: #2a1a10;
+  --room-brass: #b98a43;
+  --room-gold: #e5bc6b;
+  --room-ivory: #f3ead7;
+  --room-muted: #929a99;
   --font-display: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
-  --background: #071d18;
+  --background: #05070a;
   --foreground: #f8f2df;
-  --felt: #0b4b39;
-  --felt-deep: #07382c;
-  --felt-light: #14644d;
+  --felt: #111820;
+  --felt-deep: #090d11;
+  --felt-light: #2b2118;
   --cream: #fffaf0;
   --ink: #17201c;
   --gold: #e8bf69;
@@ -40,8 +46,8 @@ body {
   margin: 0;
   color: var(--foreground);
   background:
-    radial-gradient(circle at 50% 10%, rgb(30 105 76 / 45%), transparent 34rem),
-    linear-gradient(145deg, #061712, #092b22 58%, #04130f);
+    radial-gradient(circle at 50% 10%, rgb(140 93 38 / 18%), transparent 34rem),
+    linear-gradient(145deg, #05070a, #11151a 58%, #080604);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   overflow-x: hidden;
 }
@@ -118,10 +124,14 @@ a:focus-visible {
   outline-offset: 3px;
 }
 
-.button:disabled,
-.playing-card:disabled {
+.button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
+}
+
+.playing-card:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .button--primary {
@@ -239,7 +249,7 @@ a:focus-visible {
   background:
     radial-gradient(circle at center, rgb(30 117 86 / 75%), transparent 52%),
     linear-gradient(145deg, var(--felt), var(--felt-deep));
-  box-shadow: inset 0 0 0 0.45rem rgb(5 37 29 / 48%), 0 1.5rem 5rem rgb(0 0 0 / 34%);
+  box-shadow: inset 0 0 0 0.45rem rgb(0 0 0 / 48%), 0 1.5rem 5rem rgb(0 0 0 / 34%);
 }
 
 .seat-0 { grid-area: south; }
@@ -703,7 +713,7 @@ button.playing-card--selected:not(:disabled):hover {
   border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 2rem;
   background:
-    linear-gradient(145deg, rgb(13 75 57 / 90%), rgb(4 37 28 / 95%));
+    linear-gradient(145deg, rgb(21 25 29 / 94%), rgb(7 9 12 / 97%));
   box-shadow: 0 2rem 6rem rgb(0 0 0 / 38%);
   text-align: center;
 }
@@ -957,7 +967,7 @@ button.playing-card--selected:not(:disabled):hover {
   border-radius: 2rem;
   background:
     radial-gradient(circle at 88% 8%, rgb(232 191 105 / 16%), transparent 22rem),
-    linear-gradient(145deg, rgb(12 77 57 / 94%), rgb(3 34 26 / 98%));
+    linear-gradient(145deg, rgb(21 25 29 / 94%), rgb(7 9 12 / 98%));
   box-shadow: 0 2rem 6rem rgb(0 0 0 / 38%);
 }
 
@@ -1126,7 +1136,7 @@ button.playing-card--selected:not(:disabled):hover {
   padding: 1rem 1.2rem;
   border: 1px solid rgb(232 191 105 / 30%);
   border-radius: 1rem;
-  background: rgb(3 35 26 / 72%);
+  background: rgb(8 11 14 / 82%);
 }
 
 .room-code-panel span,
@@ -1162,7 +1172,7 @@ button.playing-card--selected:not(:disabled):hover {
   padding: 1.2rem;
   border: 1px solid rgb(255 255 255 / 13%);
   border-radius: 1rem;
-  background: rgb(4 47 35 / 68%);
+  background: rgb(10 13 16 / 78%);
 }
 
 .lobby-seat--team-a { border-left: 4px solid var(--team-a); }
@@ -1246,9 +1256,9 @@ button.playing-card--selected:not(:disabled):hover {
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 2rem;
   background:
-    radial-gradient(circle at center, rgb(30 117 86 / 68%), transparent 50%),
+    radial-gradient(circle at center, rgb(121 80 35 / 30%), transparent 50%),
     linear-gradient(145deg, var(--felt), var(--felt-deep));
-  box-shadow: inset 0 0 0 0.45rem rgb(5 37 29 / 48%), 0 1.5rem 5rem rgb(0 0 0 / 34%);
+  box-shadow: inset 0 0 0 0.45rem rgb(0 0 0 / 48%), 0 1.5rem 5rem rgb(0 0 0 / 34%);
 }
 
 .online-position-bottom { grid-area: bottom; min-width: 0; }

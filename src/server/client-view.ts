@@ -6,7 +6,9 @@ import {
 import { getTeamForSeat } from "../game/teams";
 import { SEATS } from "../game/types";
 import type { Card, Seat } from "../game/types";
+import { getRankForRating } from "../competitive/rating";
 import type {
+  ClientDiceRoll,
   ClientExchangeView,
   ClientGameView,
   ClientPlayerView,
@@ -74,6 +76,8 @@ function buildPlayers(room: RoomRecord): ClientRoomView["players"] {
       isHost: player.id === room.hostPlayerId,
       cardCount: hands?.[seat]?.length ?? 0,
       finishPosition: positions.get(seat) ?? null,
+      rating: player.rating,
+      competitiveRank: getRankForRating(player.rating),
     };
   }) as ClientRoomView["players"];
 }
@@ -153,17 +157,74 @@ export function buildClientRoomView(
     events: [...room.events],
   };
 
-  if (room.status === "LOBBY" || room.match === null) {
+  if (room.status === "LOBBY") {
     return { ...base, phase: "LOBBY", canStart: canStart(room) };
   }
 
+  if (room.opening) {
+    const currentRound = room.opening.diceContest.rounds.at(-1);
+    const requiredRollers = currentRound
+      ? currentRound.eligibleSeats.filter((seat) => currentRound.rolls[seat] === undefined)
+      : [];
+    return {
+      ...base,
+      phase: "OPENING",
+      stage: room.opening.stage,
+      rollRounds: room.opening.diceContest.rounds.map((round) => {
+        const rolls: Partial<Record<Seat, ClientDiceRoll>> = {};
+        for (const seat of SEATS) {
+          const roll = round.rolls[seat];
+          if (!roll) continue;
+          rolls[seat] = {
+            die1: roll.dice[0],
+            die2: roll.dice[1],
+            total: roll.total,
+          };
+        }
+        const highest = Math.max(
+          ...round.eligibleSeats.map((seat) => round.rolls[seat]?.total ?? -1),
+        );
+        const complete = round.eligibleSeats.every((seat) => round.rolls[seat] !== undefined);
+        return {
+          roundNumber: round.roundNumber,
+          eligibleSeats: [...round.eligibleSeats],
+          rolls,
+          tiedHighestSeats: complete
+            ? round.eligibleSeats.filter((seat) => round.rolls[seat]?.total === highest)
+            : [],
+        };
+      }),
+      requiredRollers,
+      flipperSeat: room.opening.diceContest.flipperSeat,
+      revealedCard: room.opening.revealedCard
+        ? cloneCard(room.opening.revealedCard)
+        : null,
+      startingSeat: room.opening.startingSeat,
+      canRoll: requiredRollers.includes(player.seat),
+      canFlip:
+        room.opening.stage === "WAITING_FOR_FLIP" &&
+        room.opening.diceContest.flipperSeat === player.seat,
+    };
+  }
+
+  if (room.match === null) return null;
+
   if (room.match.phase === "MATCH_COMPLETE") {
+    const ratingResult = room.ratingResults[player.seat] ?? {
+      before: player.rating,
+      after: player.rating,
+      delta: 0,
+      rankBefore: getRankForRating(player.rating),
+      rankAfter: getRankForRating(player.rating),
+      rankUp: false,
+    };
     return {
       ...base,
       phase: "MATCH_COMPLETE",
       winningTeam: room.match.matchState.winner,
       teamLevels: { ...room.match.matchState.teamLevels },
       roundNumber: room.match.roundNumber,
+      ratingResult: { ...ratingResult },
     };
   }
 
@@ -199,11 +260,13 @@ export function buildClientRoomView(
     phase: "GAME",
     roundNumber: match.roundNumber,
     currentLevelRank: match.matchState.currentLevelRank,
+    activeLevelTeam: match.matchState.activeLevelTeam,
     teamLevels: { ...match.matchState.teamLevels },
+    turnDeadlineAt: match.phase === "ROUND_IN_PROGRESS" ? room.turnDeadlineAt : null,
+    turnSequence: room.turnSequence,
     ownHand: hands[player.seat].map(cloneCard),
     firstRoundRevealedCardId:
       match.roundNumber === 1 ? match.firstRoundRevealedCardId : null,
     exchange: buildExchangeView(room, player),
   };
 }
-

@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRef, useState, type FormEvent } from "react";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
+import type { PublicRoomSummary, RoomVisibility } from "../../shared/multiplayer-protocol";
 import { ConnectionBadge } from "./ConnectionBadge";
 import styles from "./OnlineHome.module.css";
 import { UiIcon } from "./UiIcon";
@@ -11,8 +13,10 @@ type OnlineHomeProps = {
   initialRoomCode?: string;
   connectionStatus: OnlineConnectionStatus;
   errorMessage: string | null;
-  onCreate: (displayName: string) => Promise<boolean>;
+  publicRooms: readonly PublicRoomSummary[];
+  onCreate: (displayName: string, visibility: RoomVisibility) => Promise<boolean>;
   onJoin: (roomCode: string, displayName: string) => Promise<boolean>;
+  onOpenRules: () => void;
 };
 
 type RoomMode = "create" | "join";
@@ -21,19 +25,25 @@ export function OnlineHome({
   initialRoomCode = "",
   connectionStatus,
   errorMessage,
+  publicRooms = [],
   onCreate,
   onJoin,
+  onOpenRules,
 }: OnlineHomeProps) {
   const [mode, setMode] = useState<RoomMode>(initialRoomCode ? "join" : "create");
   const [createName, setCreateName] = useState("");
   const [joinName, setJoinName] = useState("");
+  const [visibility, setVisibility] = useState<RoomVisibility>("PUBLIC");
   const [roomCode, setRoomCode] = useState(initialRoomCode.toUpperCase());
   const [pending, setPending] = useState(false);
+  const [directoryMessage, setDirectoryMessage] = useState<string | null>(null);
+  const joinNameRef = useRef<HTMLInputElement>(null);
+  const accessPanelRef = useRef<HTMLElement>(null);
 
   async function submitCreate(event: FormEvent) {
     event.preventDefault();
     setPending(true);
-    await onCreate(createName);
+    await onCreate(createName, visibility);
     setPending(false);
   }
 
@@ -41,6 +51,21 @@ export function OnlineHome({
     event.preventDefault();
     setPending(true);
     await onJoin(roomCode, joinName);
+    setPending(false);
+  }
+
+  async function joinPublicRoom(code: string) {
+    if (!joinName.trim()) {
+      setMode("join");
+      setRoomCode(code);
+      setDirectoryMessage("Enter your name to join this table.");
+      accessPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => joinNameRef.current?.focus(), 0);
+      return;
+    }
+    setDirectoryMessage(null);
+    setPending(true);
+    await onJoin(code, joinName);
     setPending(false);
   }
 
@@ -75,13 +100,13 @@ export function OnlineHome({
           <div className={styles.intro}>
             <span className={styles.eyebrow}>A classic partnership card game</span>
             <p>
-              Create a private six-character room, invite three friends, and play a
+              Create a six-character room, invite three friends, and play a
               complete authoritative Guandan match from any screen.
             </p>
             <small>No accounts or installation required.</small>
           </div>
 
-          <section className={styles.accessPanel} aria-label="Room access">
+          <section ref={accessPanelRef} className={styles.accessPanel} aria-label="Room access">
             <div className={styles.tabs} role="tablist" aria-label="Room action">
               <button
                 type="button"
@@ -120,8 +145,8 @@ export function OnlineHome({
                 <div className={styles.formHeading}>
                   <span className={styles.formIcon}><UiIcon name="room" /></span>
                   <div>
-                    <h2>Create a Private Room</h2>
-                    <p>Become the host, then share the room code with three friends.</p>
+                    <h2>Create a Room</h2>
+                    <p>Open a table to everyone, or keep it private for invited friends.</p>
                   </div>
                 </div>
                 <label htmlFor="create-name">Display name</label>
@@ -137,9 +162,30 @@ export function OnlineHome({
                     placeholder="Your name"
                   />
                 </div>
+                <fieldset className={styles.visibility}>
+                  <legend>Room visibility</legend>
+                  <button
+                    type="button"
+                    aria-pressed={visibility === "PUBLIC"}
+                    className={visibility === "PUBLIC" ? styles.visibilityActive : undefined}
+                    onClick={() => setVisibility("PUBLIC")}
+                  >
+                    <strong>Public</strong>
+                    <span>Listed in Open Rooms</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={visibility === "PRIVATE"}
+                    className={visibility === "PRIVATE" ? styles.visibilityActive : undefined}
+                    onClick={() => setVisibility("PRIVATE")}
+                  >
+                    <strong>Private</strong>
+                    <span>Join by room code only</span>
+                  </button>
+                </fieldset>
                 <button type="submit" className={styles.primaryAction} disabled={unavailable}>
                   <UiIcon name="users" />
-                  {pending ? "Creating…" : "Create Private Room"}
+                  {pending ? "Creating…" : `Create ${visibility === "PUBLIC" ? "Public" : "Private"} Room`}
                   <UiIcon name="arrow" />
                 </button>
               </form>
@@ -180,6 +226,7 @@ export function OnlineHome({
                     <div className={styles.inputWrap}>
                       <UiIcon name="user" />
                       <input
+                        ref={joinNameRef}
                         id="join-name"
                         name="join-name"
                         maxLength={20}
@@ -200,25 +247,69 @@ export function OnlineHome({
             )}
 
             {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
+            {directoryMessage ? <p className={styles.directoryMessage} role="alert">{directoryMessage}</p> : null}
           </section>
 
           <footer className={styles.footer}>
-            <details>
-              <summary><UiIcon name="play" /> How to Play</summary>
-              <p>
-                Partners sit opposite. Lead a valid combination, beat the current play or
-                pass, and finish before the opposing team. Tribute is guided between rounds.
-              </p>
-            </details>
-            <a href="/local"><UiIcon name="monitor" /> Open Local Demo <UiIcon name="arrow" /></a>
+            <button type="button" onClick={onOpenRules}>
+              <UiIcon name="play" /> How to Play
+            </button>
+            <Link href="/leaderboard" className={styles.leaderboardLink}>
+              <UiIcon name="cards" />
+              <span><strong>Leaderboard</strong><small>Rating, tiers, and competitive standards.</small></span>
+              <UiIcon name="arrow" />
+            </Link>
+            <Link href="/learn" className={styles.learnLink}>
+              <UiIcon name="monitor" />
+              <span><strong>Learn to Play</strong><small>One seat, three computer players, and a live coach.</small></span>
+              <UiIcon name="arrow" />
+            </Link>
           </footer>
         </section>
 
         <aside className={styles.artStage} aria-hidden="true">
-          <span>Private rooms</span>
+          <span>Public or private</span>
           <strong>Four players.<br />One elegant table.</strong>
         </aside>
       </div>
+
+      <section id="open-rooms" className={styles.directory} aria-labelledby="open-rooms-title">
+        <div className={styles.directoryHeading}>
+          <div>
+            <span className={styles.eyebrow}>Live table directory</span>
+            <h2 id="open-rooms-title">Open Rooms</h2>
+          </div>
+          <p>Public tables update live. Private rooms remain available by code.</p>
+        </div>
+
+        {publicRooms.length === 0 ? (
+          <div className={styles.emptyDirectory}>
+            <strong>No open tables yet.</strong>
+            <span>Create the first public room, or join a private room with its code.</span>
+          </div>
+        ) : (
+          <div className={styles.roomList}>
+            <div className={styles.roomListHeader} aria-hidden="true">
+              <span>Room</span><span>Host</span><span>Players</span><span>Status</span><span />
+            </div>
+            {publicRooms.map((room) => (
+              <article key={room.code} className={styles.roomRow}>
+                <strong className={styles.directoryCode}>#{room.code}</strong>
+                <span className={styles.hostName}>{room.hostDisplayName}</span>
+                <span className={styles.occupancy}>{room.playerCount} / {room.maxPlayers}</span>
+                <span className={styles.waiting}><i aria-hidden="true" /> Waiting</span>
+                <button
+                  type="button"
+                  disabled={unavailable || room.playerCount >= room.maxPlayers}
+                  onClick={() => void joinPublicRoom(room.code)}
+                >
+                  Join Table <UiIcon name="arrow" />
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }

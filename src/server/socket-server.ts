@@ -4,6 +4,7 @@ import type {
   ClientToServerEvents,
   CommandAck,
   MutationAck,
+  LeaveRoomAck,
   ServerToClientEvents,
   SessionAck,
 } from "../shared/multiplayer-protocol";
@@ -34,6 +35,13 @@ function invalidSession(): MutationAck {
   return {
     success: false,
     error: { code: "INVALID_SESSION", message: "Reconnect to the room before acting." },
+  };
+}
+
+function invalidLeaveSession(): LeaveRoomAck {
+  return {
+    success: false,
+    error: { code: "INVALID_SESSION", message: "Reconnect to the room before leaving." },
   };
 }
 
@@ -74,6 +82,10 @@ function broadcastRoom(
   }
 }
 
+function broadcastPublicRooms(io: MultiplayerServer, manager: RoomManager): void {
+  io.emit("rooms:public", manager.listPublicRooms());
+}
+
 function associateSocket(
   socket: MultiplayerSocket,
   manager: RoomManager,
@@ -96,6 +108,7 @@ function handleMutation(
   manager: RoomManager,
   acknowledge: (result: MutationAck) => void,
   action: (token: string) => MutationAck,
+  onSuccess?: (result: MutationAck & { success: true }) => void,
 ): void {
   const token = tokenFor(socket);
   if (!token) {
@@ -105,8 +118,9 @@ function handleMutation(
   try {
     const result = action(token);
     acknowledge(result);
-    if (result.success && socket.data.roomCode) {
+    if ((result.success || result.error.code === "STALE_ACTION") && socket.data.roomCode) {
       broadcastRoom(io, manager, socket.data.roomCode);
+      if (result.success) onSuccess?.(result);
     }
   } catch {
     acknowledge(serverFailure());
@@ -116,10 +130,34 @@ function handleMutation(
 export function attachSocketServer(
   httpServer: HttpServer,
   manager = new RoomManager(),
+  options: { openingResultDelayMs?: number; turnTimerPollMs?: number } = {},
 ): { io: MultiplayerServer; manager: RoomManager } {
   const io: MultiplayerServer = new Server(httpServer);
+  const openingResultDelayMs = options.openingResultDelayMs ?? 2_200;
+  const turnTimerPollMs = options.turnTimerPollMs ?? 250;
+  const openingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const turnTimer = setInterval(() => {
+    for (const roomCode of manager.expireDueTurns()) {
+      broadcastRoom(io, manager, roomCode);
+    }
+  }, turnTimerPollMs);
+  turnTimer.unref();
+  io.engine.once("close", () => clearInterval(turnTimer));
+
+  function scheduleOpeningDeal(roomCode: string): void {
+    if (openingTimers.has(roomCode)) return;
+    const timer = setTimeout(() => {
+      openingTimers.delete(roomCode);
+      const result = manager.completeOpening(roomCode);
+      if (result.success) broadcastRoom(io, manager, roomCode);
+    }, openingResultDelayMs);
+    timer.unref();
+    openingTimers.set(roomCode, timer);
+  }
 
   io.on("connection", (socket) => {
+    socket.emit("rooms:public", manager.listPublicRooms());
+
     socket.on("room:create", (payload, acknowledge) => {
       if (tokenFor(socket)) {
         acknowledge(activeSessionConflict());
@@ -129,10 +167,15 @@ export function attachSocketServer(
         const result = manager.createRoom(
           typeof payload?.displayName === "string" ? payload.displayName : "",
           socket.id,
+          payload?.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+          typeof payload?.playerId === "string" ? payload.playerId : "",
         );
         associateSocket(socket, manager, result);
         acknowledge(result);
-        if (result.success) broadcastRoom(io, manager, result.session.roomCode);
+        if (result.success) {
+          broadcastRoom(io, manager, result.session.roomCode);
+          broadcastPublicRooms(io, manager);
+        }
       } catch {
         acknowledge(serverFailure());
       }
@@ -148,10 +191,14 @@ export function attachSocketServer(
           typeof payload?.roomCode === "string" ? payload.roomCode : "",
           typeof payload?.displayName === "string" ? payload.displayName : "",
           socket.id,
+          typeof payload?.playerId === "string" ? payload.playerId : "",
         );
         associateSocket(socket, manager, result);
         acknowledge(result);
-        if (result.success) broadcastRoom(io, manager, result.session.roomCode);
+        if (result.success) {
+          broadcastRoom(io, manager, result.session.roomCode);
+          broadcastPublicRooms(io, manager);
+        }
       } catch {
         acknowledge(serverFailure());
       }
@@ -180,13 +227,72 @@ export function attachSocketServer(
       }
     });
 
+    socket.on("room:leave", (_payload, acknowledge) => {
+      const token = tokenFor(socket);
+      const roomCode = socket.data.roomCode;
+      if (!token || !roomCode) {
+        acknowledge(invalidLeaveSession());
+        return;
+      }
+      try {
+        const result = manager.leaveRoom(token);
+        acknowledge(result);
+        if (!result.success) return;
+
+        const socketIds = [...(io.sockets.adapter.rooms.get(roomCode) ?? [])];
+        for (const socketId of socketIds) {
+          const target = io.sockets.sockets.get(socketId);
+          if (!target) continue;
+          const sameSession = target.data.reconnectToken === token;
+          if (result.roomDeleted || sameSession) {
+            target.emit("room:closed", {
+              reason: result.matchCancelled ? "PLAYER_LEFT_MATCH" : "SESSION_LEFT",
+              message: result.matchCancelled
+                ? "The match ended because a player intentionally left the table."
+                : "You left the table.",
+            });
+            delete target.data.roomCode;
+            delete target.data.reconnectToken;
+            target.leave(roomCode);
+          }
+        }
+
+        if (!result.roomDeleted) broadcastRoom(io, manager, roomCode);
+        broadcastPublicRooms(io, manager);
+      } catch {
+        acknowledge(serverFailure());
+      }
+    });
+
     socket.on("lobby:set-ready", (payload, acknowledge) => {
       handleMutation(socket, io, manager, acknowledge, (token) =>
         manager.setReady(token, payload?.ready === true));
     });
 
     socket.on("lobby:start", (_payload, acknowledge) => {
-      handleMutation(socket, io, manager, acknowledge, (token) => manager.startMatch(token));
+      const wrappedAcknowledge = (result: MutationAck) => {
+        acknowledge(result);
+        if (result.success) broadcastPublicRooms(io, manager);
+      };
+      handleMutation(socket, io, manager, wrappedAcknowledge, (token) => manager.startMatch(token));
+    });
+
+    socket.on("game:roll-dice", (_payload, acknowledge) => {
+      handleMutation(socket, io, manager, acknowledge, (token) =>
+        manager.rollOpeningDice(token));
+    });
+
+    socket.on("game:flip-card", (_payload, acknowledge) => {
+      handleMutation(
+        socket,
+        io,
+        manager,
+        acknowledge,
+        (token) => manager.flipOpeningCard(token),
+        () => {
+          if (socket.data.roomCode) scheduleOpeningDeal(socket.data.roomCode);
+        },
+      );
     });
 
     socket.on("game:play", (payload, acknowledge) => {
@@ -231,9 +337,28 @@ export function attachSocketServer(
             });
     });
 
+    socket.on("leaderboard:get", (payload, acknowledge) => {
+      try {
+        const playerId = typeof payload?.playerId === "string" ? payload.playerId.trim() : "";
+        if (!/^[A-Za-z0-9_-]{20,128}$/.test(playerId)) {
+          acknowledge({
+            success: false,
+            error: { code: "INVALID_PLAYER_ID", message: "Your competitive player identity is invalid." },
+          });
+          return;
+        }
+        acknowledge({ success: true, ...manager.getLeaderboard(playerId) });
+      } catch {
+        acknowledge(serverFailure());
+      }
+    });
+
     socket.on("disconnect", () => {
       const roomCode = manager.disconnectConnection(socket.id);
-      if (roomCode) broadcastRoom(io, manager, roomCode);
+      if (roomCode) {
+        broadcastRoom(io, manager, roomCode);
+        broadcastPublicRooms(io, manager);
+      }
     });
   });
 

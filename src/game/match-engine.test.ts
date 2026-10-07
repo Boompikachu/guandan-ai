@@ -62,6 +62,7 @@ function initializedState(
   const result = createMatchEngineState({
     shuffledDeck: deck,
     revealedCardId,
+    startingSeat: input.startingSeat ?? 0,
     initialMatch: input.initialMatch,
   });
   if (!result.success) throw new Error(`Initialization failed: ${result.error}`);
@@ -195,7 +196,7 @@ function normalReturnCard(
 }
 
 describe("first-round match setup", () => {
-  it("deals a supplied deck and keeps the revealed card in its holder's hand", () => {
+  it("deals a supplied deck while honoring the already-resolved starting seat", () => {
     const deck = createDeck();
     const revealedCard = deck[37];
     if (!revealedCard) throw new Error("Missing revealed card fixture.");
@@ -204,6 +205,7 @@ describe("first-round match setup", () => {
     const state = initializedState({
       shuffledDeck: deck,
       revealedCardId: revealedCard.id,
+      startingSeat: 3,
     });
 
     expect(state.phase).toBe("ROUND_IN_PROGRESS");
@@ -212,7 +214,7 @@ describe("first-round match setup", () => {
     expect(state.roundState.hands.map((hand) => hand.length)).toEqual([
       27, 27, 27, 27,
     ]);
-    expect(state.roundState.currentTurn).toBe(1);
+    expect(state.roundState.currentTurn).toBe(3);
     expect(state.roundState.hands[1]).toContain(revealedCard);
     expect(state.roundState.hands.flat()).toHaveLength(108);
     expect(state.roundState.currentLevelRank).toBe(state.matchState.currentLevelRank);
@@ -221,18 +223,19 @@ describe("first-round match setup", () => {
   });
 
   it.each([0, 1, 2, 3] as const)(
-    "uses seat %i when that seat receives the revealed card",
+    "uses explicit starting seat %i independently of the revealed card's eventual holder",
     (seat) => {
       const deck = createDeck();
-      const revealedCard = deck[seat];
+      const revealedCard = deck[37];
       if (!revealedCard) throw new Error("Missing revealed card fixture.");
       const state = initializedState({
         shuffledDeck: deck,
         revealedCardId: revealedCard.id,
+        startingSeat: seat,
       });
 
       expect(state.roundState.currentTurn).toBe(seat);
-      expect(state.roundState.hands[seat]).toContain(revealedCard);
+      expect(state.roundState.hands[1]).toContain(revealedCard);
     },
   );
 
@@ -258,6 +261,7 @@ describe("first-round match setup", () => {
     expect(createMatchEngineState({
       shuffledDeck: createDeck(),
       revealedCardId: "unknown-card",
+      startingSeat: 0,
     })).toEqual({ success: false, error: "INVALID_REVEALED_CARD" });
   });
 
@@ -266,6 +270,7 @@ describe("first-round match setup", () => {
     expect(createMatchEngineState({
       shuffledDeck: shortDeck,
       revealedCardId: shortDeck[0]?.id ?? "missing",
+      startingSeat: 0,
     })).toEqual({ success: false, error: "INVALID_DECK" });
 
     const duplicateDeck = createDeck();
@@ -273,6 +278,7 @@ describe("first-round match setup", () => {
     expect(createMatchEngineState({
       shuffledDeck: duplicateDeck,
       revealedCardId: duplicateDeck[0]?.id ?? "missing",
+      startingSeat: 0,
     })).toEqual({ success: false, error: "INVALID_DECK" });
 
     const corruptDeck = createDeck();

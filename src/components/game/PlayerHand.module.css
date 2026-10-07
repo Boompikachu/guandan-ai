@@ -3,7 +3,7 @@
   padding: 0.65rem 0.8rem 0.45rem;
   border: 1px solid rgb(229 188 107 / 20%);
   border-radius: 1.3rem;
-  background: linear-gradient(180deg, rgb(2 23 20 / 78%), rgb(1 14 13 / 92%));
+  background: linear-gradient(180deg, rgb(15 19 23 / 88%), rgb(5 7 9 / 94%));
   box-shadow: inset 0 1px rgb(255 255 255 / 3%), 0 1rem 2.5rem rgb(0 0 0 / 30%);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -17,10 +17,60 @@
     0 1rem 2.5rem rgb(0 0 0 / 30%);
 }
 
-.scroll {
+.primary {
+  padding: 0.35rem 0.55rem 0.25rem;
+  border-color: rgb(229 188 107 / 30%);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgb(16 20 24 / 78%), rgb(5 7 10 / 88%));
+  box-shadow: inset 0 1px rgb(255 255 255 / 3%), 0 0.65rem 1.8rem rgb(0 0 0 / 24%);
+}
+
+.compact {
+  padding: 0.28rem 0.35rem 0.15rem;
+  border-color: transparent;
+  border-radius: 0.8rem;
+  background: rgb(4 7 9 / 52%);
+  box-shadow: none;
+}
+
+.handTools {
   display: flex;
+  min-height: 1.55rem;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.08rem 0.12rem 0;
+}
+
+.handTools button {
+  min-height: 1.38rem;
+  padding: 0.16rem 0.42rem;
+  border: 1px solid rgb(229 188 107 / 24%);
+  border-radius: 0.35rem;
+  color: #cfc4aa;
+  background: rgb(255 255 255 / 4%);
+  font-size: 0.49rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.handTools button:hover,
+.handTools .arrangeActive {
+  color: #1a1208;
+  border-color: #e7c77e;
+  background: #dfb763;
+}
+
+.handTools span {
+  margin-left: 0.16rem;
+  color: #788682;
+  font-size: 0.48rem;
+}
+
+.scroll {
+  display: block;
   min-height: 7.35rem;
-  align-items: flex-end;
   max-width: 100%;
   padding: 1.15rem 0.45rem 0.4rem;
   overflow-x: auto;
@@ -28,14 +78,53 @@
   overscroll-behavior-inline: contain;
   scrollbar-color: rgb(229 188 107 / 55%) rgb(0 0 0 / 22%);
   scrollbar-width: thin;
+  touch-action: pan-x;
 }
 
-.scroll > :global(.playing-card) + :global(.playing-card) {
-  margin-inline-start: clamp(-2.4rem, -2.2vw, -1.3rem);
+.fan {
+  position: relative;
+  width: var(--fan-width, 100%);
+  height: 6.45rem;
+  margin-inline: auto;
 }
 
-.scroll > :global(.playing-card--selected) {
-  z-index: 60;
+.primary .scroll {
+  min-height: 6.9rem;
+  padding: 1.25rem 4.55rem 0.2rem 0.2rem;
+}
+
+.compact .scroll {
+  min-height: 4rem;
+  padding: 0.35rem 3.45rem 0.1rem 0.1rem;
+}
+
+.compact .fan {
+  height: 4.9rem;
+}
+
+.cardSlot {
+  position: absolute;
+  bottom: 0;
+  width: max-content;
+  isolation: isolate;
+}
+
+.arranging {
+  touch-action: none;
+}
+
+.arranging .cardSlot {
+  cursor: grab;
+}
+
+.dragging {
+  z-index: 1100 !important;
+  cursor: grabbing;
+  filter: drop-shadow(0 0 0.55rem rgb(229 188 107 / 65%));
+}
+
+.compact :global(.playing-card:disabled) {
+  opacity: 0.86;
 }
 
 .empty {
@@ -45,12 +134,6 @@
   color: #93a39f;
   font-size: 0.8rem;
   font-weight: 750;
-}
-
-@media (max-width: 1100px) {
-  .scroll > :global(.playing-card) + :global(.playing-card) {
-    margin-inline-start: -2.1rem;
-  }
 }
 
 @media (max-width: 760px) {
@@ -64,7 +147,30 @@
     padding: 0.95rem 0.2rem 0.25rem;
   }
 
-  .scroll > :global(.playing-card) + :global(.playing-card) {
-    margin-inline-start: -1.2rem;
+  .primary .scroll {
+    min-height: 6.15rem;
+    padding: 0.95rem 0.2rem 0.25rem;
   }
+
+  .compact .scroll {
+    min-height: 3.65rem;
+    padding: 0.25rem 0.1rem 0.1rem;
+    overflow-x: auto;
+  }
+
+  .fan { height: 5.3rem; }
+  .compact .fan { height: 4.05rem; }
+  .handTools span { display: none; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .zone { padding: 0.18rem 0.28rem 0.12rem; border-radius: 0.55rem; }
+  .primary { padding: 0.12rem 0.25rem 0.08rem; }
+  .scroll,
+  .primary .scroll { min-height: 5.2rem; padding: 0.95rem 0.15rem 0.12rem; }
+  .fan { height: 4.45rem; }
+  .handTools { min-height: 1.05rem; gap: 0.18rem; padding-top: 0; }
+  .handTools button { min-height: 0.96rem; padding: 0.08rem 0.26rem; font-size: 0.36rem; border-radius: 0.24rem; }
+  .compact .scroll { min-height: 2.45rem; padding: 0.08rem 1.9rem 0.03rem 0.03rem; }
+  .compact .fan { height: 2.7rem; }
 }

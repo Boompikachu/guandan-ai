@@ -27,7 +27,10 @@ async function main(): Promise<void> {
   const { io, manager } = attachSocketServer(httpServer);
   const cleanupTimer = setInterval(() => {
     const removed = manager.cleanupAbandonedRooms(ABANDONED_ROOM_TTL_MS);
-    if (removed > 0) console.log(`Removed ${removed} abandoned room(s).`);
+    if (removed > 0) {
+      io.emit("rooms:public", manager.listPublicRooms());
+      console.log(`Removed ${removed} abandoned room(s).`);
+    }
   }, ROOM_CLEANUP_INTERVAL_MS);
   cleanupTimer.unref();
 

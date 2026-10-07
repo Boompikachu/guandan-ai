@@ -1,9 +1,14 @@
 .gameShell {
-  min-height: 100svh;
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
   color: var(--ivory);
   background:
     radial-gradient(circle at 50% 0%, rgb(58 39 22 / 35%), transparent 30rem),
-    #030707;
+    #05070a;
 }
 
 .topBar {
@@ -34,7 +39,7 @@
   border: 1px solid rgb(229 188 107 / 55%);
   border-radius: 50%;
   color: #e5c47e;
-  background: radial-gradient(circle at 35% 25%, #273a35, #07100f 72%);
+  background: radial-gradient(circle at 35% 25%, #3b2d21, #090c0f 72%);
   font-family: "Noto Serif SC", "Songti SC", SimSun, serif;
   box-shadow: inset 0 0 1rem rgb(229 188 107 / 8%);
 }
@@ -79,9 +84,9 @@
 }
 
 .liveChip {
-  color: #a7e1bc;
-  border-color: rgb(62 173 103 / 26%);
-  background: rgb(24 129 64 / 17%);
+  color: #d9c58f;
+  border-color: rgb(229 188 107 / 25%);
+  background: rgb(229 188 107 / 8%);
   letter-spacing: 0;
 }
 
@@ -89,8 +94,8 @@
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
-  background: #69d693;
-  box-shadow: 0 0 0.7rem #69d693;
+  background: #e0bd6b;
+  box-shadow: 0 0 0.7rem #e0bd6b;
 }
 
 .metrics {
@@ -102,6 +107,10 @@
   margin-left: auto;
 }
 
+.metrics > section {
+  flex: 0 1 auto;
+}
+
 .metrics > span {
   display: grid;
   min-height: 2.6rem;
@@ -111,13 +120,13 @@
   text-align: center;
 }
 
-.metrics small,
-.metrics strong {
+.metrics > span small,
+.metrics > span strong {
   display: block;
   white-space: nowrap;
 }
 
-.metrics small {
+.metrics > span small {
   color: #71817d;
   font-size: 0.54rem;
   font-weight: 850;
@@ -125,7 +134,7 @@
   text-transform: uppercase;
 }
 
-.metrics strong {
+.metrics > span strong {
   margin-top: 0.12rem;
   color: #d8d6cc;
   font-size: 0.7rem;
@@ -147,8 +156,29 @@
   flex: 0 0 auto;
 }
 
+.rulesButton,
+.leaveButton {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgb(229 188 107 / 27%);
+  border-radius: 0.55rem;
+  color: #dcc58f;
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.66rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.leaveButton {
+  flex: 0 0 auto;
+  color: #efb4aa;
+  border-color: rgb(190 67 57 / 43%);
+}
+
 .tableFrame {
-  min-height: calc(100svh - 4.6rem);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: clamp(0.45rem, 0.8vw, 0.85rem);
   background:
     linear-gradient(118deg, rgb(255 255 255 / 4%), transparent 16% 78%, rgb(229 188 107 / 5%)),
@@ -160,26 +190,27 @@
 .tableSurface {
   position: relative;
   display: grid;
-  min-height: calc(100svh - 5.7rem);
+  height: 100%;
+  min-height: 0;
   grid-template-areas:
     ". top ."
     "left center right"
     "bottom bottom bottom";
   grid-template-columns: minmax(12rem, 0.82fr) minmax(28rem, 2.2fr) minmax(12rem, 0.82fr);
-  grid-template-rows: minmax(8rem, 0.58fr) minmax(19rem, 1.55fr) auto;
+  grid-template-rows: minmax(6.5rem, 0.5fr) minmax(12rem, 1.35fr) auto;
   gap: clamp(0.35rem, 0.8vw, 0.8rem);
   padding: clamp(0.65rem, 1.2vw, 1.25rem);
   overflow: hidden;
   border: 1px solid rgb(229 188 107 / 47%);
   border-radius: clamp(1.8rem, 4.5vw, 5rem);
   background:
-    radial-gradient(ellipse at 50% 42%, rgb(12 111 83 / 74%), transparent 48%),
-    radial-gradient(ellipse at 50% 20%, rgb(14 100 77 / 30%), transparent 55%),
+    radial-gradient(ellipse at 50% 42%, rgb(106 69 33 / 40%), transparent 48%),
+    radial-gradient(ellipse at 50% 20%, rgb(50 61 70 / 32%), transparent 55%),
     repeating-linear-gradient(31deg, rgb(255 255 255 / 1.8%) 0 1px, transparent 1px 4px),
-    linear-gradient(145deg, #075747, #003b31 58%, #00251f);
+    linear-gradient(145deg, #192027, #0a0e12 58%, #130b07);
   box-shadow:
-    inset 0 0 0 0.35rem rgb(0 19 16 / 38%),
-    inset 0 0 7rem rgb(0 15 12 / 82%),
+    inset 0 0 0 0.35rem rgb(0 0 0 / 38%),
+    inset 0 0 7rem rgb(0 0 0 / 84%),
     0 1rem 4rem rgb(0 0 0 / 55%);
 }
 
@@ -252,21 +283,45 @@
   padding: 0.55rem 0.65rem 0.45rem;
   border: 1px solid transparent;
   border-radius: 1rem;
-  background: rgb(0 24 20 / 34%);
+  background: rgb(6 9 12 / 56%);
   transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 .currentSeat {
   border-color: rgb(229 188 107 / 56%);
-  background: rgb(1 23 20 / 65%);
+  background: rgb(12 15 18 / 82%);
   box-shadow: 0 0 1.8rem rgb(229 188 107 / 13%), inset 0 0 1rem rgb(229 188 107 / 3%);
+}
+
+.opponentTurn {
+  position: absolute;
+  z-index: 8;
+  bottom: calc(100% + 0.35rem);
+  left: 50%;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.positionLeft .opponentTurn {
+  top: 50%;
+  right: calc(100% + 0.35rem);
+  bottom: auto;
+  left: auto;
+  transform: translateY(-50%);
+}
+
+.positionRight .opponentTurn {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 0.35rem);
+  transform: translateY(-50%);
 }
 
 .playerIdentity {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.3rem;
 }
 
 .avatar {
@@ -278,7 +333,7 @@
   border: 1px solid rgb(229 188 107 / 58%);
   border-radius: 50%;
   color: #cab47f;
-  background: radial-gradient(circle at 35% 25%, #23423a, #06100e 73%);
+  background: radial-gradient(circle at 35% 25%, #3b2d21, #090c0f 73%);
   box-shadow: inset 0 0 0 3px rgb(0 0 0 / 17%), 0 0.5rem 1rem rgb(0 0 0 / 30%);
 }
 
@@ -313,7 +368,13 @@
   text-transform: uppercase;
 }
 
-.teamA { color: #76d5ae; }
+.playerIdentity div .competitiveLine {
+  color: #c7ae72;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+}
+
+.teamA { color: #8ebfdf; }
 .teamB { color: #e4ad67; }
 
 .cardCount {
@@ -345,7 +406,7 @@
   padding: 0.17rem 0.4rem;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 99rem;
-  background: #0a1b18;
+  background: #101418;
   font-size: 0.5rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -357,13 +418,27 @@
 .disconnected { color: #ffaaa4; border-color: rgb(255 139 131 / 25%); }
 
 .cardBackRow {
-  display: flex;
+  display: block;
   min-height: 3.65rem;
-  align-items: center;
-  justify-content: center;
   margin-top: 0.25rem;
   padding-inline: 0.8rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.cardBackFan {
+  position: relative;
+  width: var(--fan-width, 100%);
+  height: 3.25rem;
+  margin-inline: auto;
+}
+
+.cardBackSlot {
+  position: absolute;
+  bottom: 0;
+  display: block;
+  width: max-content;
 }
 
 .cardBack {
@@ -371,7 +446,6 @@
   display: grid;
   width: 2.3rem;
   height: 3.25rem;
-  margin-left: -1.15rem;
   place-items: center;
   flex: 0 0 auto;
   overflow: hidden;
@@ -381,13 +455,9 @@
   background:
     linear-gradient(45deg, transparent 43%, rgb(214 165 86 / 12%) 44% 46%, transparent 47%),
     linear-gradient(-45deg, transparent 43%, rgb(214 165 86 / 12%) 44% 46%, transparent 47%),
-    #0a1719;
+    #0b1015;
   background-size: 9px 9px;
-  box-shadow: inset 0 0 0 2px #101f20, inset 0 0 0 3px rgb(185 138 67 / 35%), 0 0.25rem 0.5rem rgb(0 0 0 / 40%);
-}
-
-.cardBack:first-child {
-  margin-left: 0;
+  box-shadow: inset 0 0 0 2px #171b20, inset 0 0 0 3px rgb(185 138 67 / 35%), 0 0.25rem 0.5rem rgb(0 0 0 / 40%);
 }
 
 .cardBack span {
@@ -397,7 +467,7 @@
   place-items: center;
   border: 1px solid rgb(185 138 67 / 48%);
   border-radius: 50%;
-  background: #0b1718;
+  background: #11151a;
   font-family: "Noto Serif SC", "Songti SC", SimSun, serif;
   font-size: 0.55rem;
 }
@@ -436,7 +506,7 @@
   padding: 0.7rem 1rem;
   border: 1px solid rgb(229 188 107 / 22%);
   border-radius: 1rem;
-  background: rgb(2 21 18 / 76%);
+  background: rgb(8 11 14 / 86%);
   box-shadow: 0 0.7rem 2rem rgb(0 0 0 / 25%);
   backdrop-filter: blur(12px);
 }
@@ -471,7 +541,7 @@
   padding: 0.5rem 0.7rem;
   border-left: 2px solid rgb(229 188 107 / 58%);
   color: #a9b5b1;
-  background: rgb(0 19 16 / 52%);
+  background: rgb(5 8 11 / 72%);
   font-size: 0.62rem;
   backdrop-filter: blur(8px);
 }
@@ -498,11 +568,13 @@
 .exchangeStage {
   display: grid;
   width: min(100% - 2rem, 76rem);
-  min-height: calc(100svh - 4.6rem);
+  height: 100%;
+  min-height: 0;
   align-content: center;
   gap: 1rem;
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: clamp(0.7rem, 2vw, 1.5rem) 0;
+  overflow: auto;
 }
 
 .exchangeStage::before {
@@ -511,10 +583,10 @@
   inset: 4.6rem 0 0;
   content: "";
   background:
-    radial-gradient(ellipse at center, rgb(10 94 72 / 72%), transparent 58%),
+    radial-gradient(ellipse at center, rgb(117 76 33 / 34%), transparent 58%),
     repeating-linear-gradient(30deg, rgb(255 255 255 / 1.5%) 0 1px, transparent 1px 4px),
-    linear-gradient(145deg, #064d3f, #002b25);
-  box-shadow: inset 0 0 8rem rgb(0 12 10 / 82%);
+    linear-gradient(145deg, #181e24, #090c10);
+  box-shadow: inset 0 0 8rem rgb(0 0 0 / 84%);
 }
 
 .exchangePanel {
@@ -523,7 +595,7 @@
   padding: 1.4rem 1.8rem;
   border: 1px solid rgb(229 188 107 / 42%);
   border-radius: 1.2rem;
-  background: linear-gradient(145deg, rgb(5 22 20 / 94%), rgb(2 13 13 / 94%));
+  background: linear-gradient(145deg, rgb(18 22 26 / 96%), rgb(5 8 11 / 96%));
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 36%), inset 0 1px rgb(255 255 255 / 4%);
   text-align: center;
   backdrop-filter: blur(14px);
@@ -607,36 +679,49 @@
 }
 
 .completePage {
+  position: relative;
   display: grid;
-  min-height: 100svh;
+  min-height: 100dvh;
+  overflow: hidden;
   padding: 1rem;
   place-items: center;
   color: var(--ivory);
   background:
-    radial-gradient(circle at 50% 43%, rgb(17 102 78 / 54%), transparent 25rem),
-    radial-gradient(circle at 50% 20%, rgb(229 188 107 / 11%), transparent 25rem),
-    #03090a;
+    radial-gradient(ellipse at 50% 43%, rgb(121 80 35 / 28%), transparent 45%),
+    repeating-linear-gradient(31deg, rgb(255 255 255 / 1.4%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #171d22, #090c10 58%, #100906);
+  box-shadow: inset 0 0 0 0.65rem #140d09, inset 0 0 10rem rgb(0 0 0 / 82%);
+}
+
+.completePage::before,
+.completePage::after {
+  position: absolute;
+  border: 1px solid rgb(229 188 107 / 16%);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.completePage::before {
+  width: min(76vw, 68rem);
+  aspect-ratio: 1.8;
+}
+
+.completePage::after {
+  width: min(59vw, 52rem);
+  aspect-ratio: 1.8;
 }
 
 .completeCard {
   position: relative;
+  z-index: 1;
   width: min(100%, 38rem);
-  overflow: hidden;
-  padding: clamp(2rem, 6vw, 4rem);
-  border: 1px solid rgb(229 188 107 / 48%);
-  border-radius: 1.5rem;
-  background: linear-gradient(145deg, rgb(7 28 24 / 96%), rgb(3 13 13 / 97%));
-  box-shadow: 0 2.5rem 7rem rgb(0 0 0 / 55%), inset 0 1px rgb(255 255 255 / 4%);
+  padding: clamp(1.5rem, 5vw, 3rem);
   text-align: center;
 }
 
 .completeCard::before {
-  position: absolute;
-  inset: 1rem;
-  border: 1px solid rgb(229 188 107 / 8%);
-  border-radius: 1rem;
-  content: "";
-  pointer-events: none;
+  display: none;
 }
 
 .victoryEmblem {
@@ -700,6 +785,97 @@
   background: rgb(229 188 107 / 20%);
 }
 
+.ratingResult {
+  display: grid;
+  width: min(27rem, 100%);
+  gap: 0.7rem;
+  margin: 1rem auto 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid rgb(221 183 101 / 32%);
+  border-radius: 0.9rem;
+  background: rgb(4 22 20 / 66%);
+}
+
+.ratingResult > div:first-child,
+.rankUp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ratingResult > div:first-child > span,
+.rankUp span {
+  color: #bdb7a8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.ratingResult p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.ratingResult p strong {
+  color: #f2e3bd;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+}
+
+.ratingResult p > span {
+  color: #9f8a5a;
+}
+
+.ratingResult p b {
+  min-width: 3.2rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.ratingGain { color: #baf0c9; background: rgb(29 128 76 / 28%); }
+.ratingLoss { color: #f1ada6; background: rgb(153 48 43 / 25%); }
+
+.rankUp {
+  padding-top: 0.65rem;
+  border-top: 1px solid rgb(221 183 101 / 18%);
+}
+
+.rankUp strong { color: #f0cb78; }
+
+.cancelledCard { border-color: rgb(174 76 62 / 50%); }
+.cancelledEmblem {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 0.8rem;
+  place-items: center;
+  color: #f0b1a5;
+  border: 1px solid #a55245;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  background: rgb(122 41 33 / 25%);
+}
+
+.noRatingChange {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgb(221 183 101 / 22%);
+  border-radius: 0.7rem;
+  background: rgb(3 20 18 / 58%);
+}
+
+.noRatingChange strong { color: #e8ca83; }
+.noRatingChange span { color: #bdb9ae; font-size: 0.78rem; }
+
 .returnButton {
   position: relative;
   z-index: 1;
@@ -723,9 +899,6 @@
     grid-template-columns: minmax(10rem, 0.72fr) minmax(24rem, 2.1fr) minmax(10rem, 0.72fr);
   }
 
-  .cardBack {
-    margin-left: -1.35rem;
-  }
 }
 
 @media (max-width: 840px) {
@@ -744,18 +917,18 @@
   }
 
   .tableFrame {
-    min-height: auto;
+    min-height: 0;
   }
 
   .tableSurface {
-    min-height: calc(100svh - 7.5rem);
+    min-height: 0;
     grid-template-areas:
       "top top"
       "left right"
       "center center"
       "bottom bottom";
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(15rem, 1fr) auto;
+    grid-template-rows: auto auto minmax(9rem, 1fr) auto;
     border-radius: 2rem;
   }
 
@@ -765,7 +938,7 @@
   }
 
   .centerStage {
-    min-height: 15rem;
+    min-height: 9rem;
   }
 }
 
@@ -834,7 +1007,7 @@
   }
 
   .tableSurface {
-    min-height: calc(100svh - 6.5rem);
+    min-height: 0;
     gap: 0.35rem;
     padding: 0.45rem;
     border-radius: 1.35rem;
@@ -856,7 +1029,7 @@
   .playerSeat {
     padding: 0.35rem;
     border-radius: 0.75rem;
-    background: rgb(0 24 20 / 62%);
+    background: rgb(6 9 12 / 78%);
   }
 
   .avatar {
@@ -898,12 +1071,11 @@
   .cardBack {
     width: 1.55rem;
     height: 2.2rem;
-    margin-left: -0.95rem;
     border-radius: 0.2rem;
   }
 
-  .cardBack:nth-child(n + 7) {
-    display: none;
+  .cardBackFan {
+    height: 2.2rem;
   }
 
   .cardBack span {
@@ -958,7 +1130,50 @@
   }
 }
 
-@media (max-height: 760px) and (min-width: 841px) {
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .topBar { min-height: 2.6rem; flex-wrap: nowrap; gap: 0.35rem; padding: 0.22rem 0.45rem; }
+  .brandMark, .liveChip, .topBar :global(.connection-badge) { display: none; }
+  .brand h1 { font-size: 0.9rem; }
+  .roomChip { min-height: 1.75rem; padding: 0.2rem 0.4rem; font-size: 0.48rem; }
+  .roomChip small { font-size: 0.36rem; }
+  .metrics { justify-content: flex-end; }
+  .metrics > span { min-height: 1.7rem; padding: 0.08rem 0.28rem; }
+  .metrics > span small { font-size: 0.36rem; }
+  .metrics > span strong, .levelMetric strong { font-size: 0.52rem; }
+  .rulesButton, .leaveButton { min-height: 1.8rem; padding: 0.2rem 0.42rem; font-size: 0.48rem; }
+  .tableFrame { padding: 0.15rem; }
+  .tableSurface { grid-template-areas: ". top ." "left center right" "bottom bottom bottom"; grid-template-columns: 7.7rem minmax(15rem, 1fr) 7.7rem; grid-template-rows: 3rem minmax(4rem, 1fr) 11.8rem; gap: 0.12rem; padding: 0.25rem; border-radius: 1.15rem; }
+  .tableSurface::before { inset: 0.28rem; }
+  .tableSurface::after, .cloudMotif, .eventToast { display: none; }
+  .positionTop { width: 14rem; }
+  .playerSeat { padding: 0.14rem 0.22rem; border-radius: 0.45rem; }
+  .opponentTurn { bottom: calc(100% + 0.1rem); }
+  .positionLeft .opponentTurn { right: calc(100% + 0.1rem); }
+  .positionRight .opponentTurn { left: calc(100% + 0.1rem); }
+  .playerIdentity { gap: 0.22rem; }
+  .avatar { display: none; }
+  .playerIdentity strong { font-size: 0.5rem; }
+  .playerIdentity div span, .cardCount { font-size: 0.36rem; }
+  .seatBadges { display: none; }
+  .cardBackRow { height: 1.25rem; margin-top: 0.08rem; padding: 0; overflow: hidden; }
+  .cardBackFan { height: 1.2rem; }
+  .cardBack { width: 1rem; height: 1.3rem; border-radius: 0.1rem; }
+  .cardBack span { display: none; }
+  .centerStage { width: min(100%, 22rem); min-height: 0; }
+  .bottomDock { gap: 0.12rem; }
+  .waitingPanel { min-height: 2.25rem; padding: 0.25rem 0.5rem; border-radius: 0.5rem; }
+  .waitingPanel strong { font-size: 0.62rem; }
+  .waitingPanel p { font-size: 0.45rem; }
+  .exchangeStage { width: min(100% - 1rem, 54rem); gap: 0.3rem; padding: 0.3rem 0; overflow: hidden; }
+  .exchangeStage::before { inset: 2.6rem 0 0; }
+  .exchangePanel { padding: 0.45rem 0.8rem; border-radius: 0.65rem; }
+  .exchangeEmblem { display: none; }
+  .exchangePanel h2 { font-size: 1rem; }
+  .exchangePanel p, .exchangePanel strong, .exchangePanel small { margin-top: 0.2rem; font-size: 0.52rem; }
+  .exchangeSubmit { min-height: 2rem; padding: 0.25rem 0.8rem; font-size: 0.65rem; }
+}
+
+@media (max-height: 760px) and (min-height: 501px) and (min-width: 841px) {
   .tableSurface {
     grid-template-rows: minmax(6.6rem, 0.5fr) minmax(14rem, 1.2fr) auto;
   }

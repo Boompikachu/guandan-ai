@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { TurnIndicator } from "./TurnIndicator";
 import styles from "./GameControls.module.css";
 
 type InterpretationChoice = {
@@ -15,6 +19,9 @@ type GameControlsProps = {
   canPlay: boolean;
   canPass: boolean;
   selectedCount: number;
+  selectedLabels?: readonly string[];
+  playLabel?: string | null;
+  turnDeadlineAt?: number | null;
   errorMessage: string | null;
   onSelectInterpretation: (key: string) => void;
   onPlay: () => void;
@@ -31,16 +38,45 @@ export function GameControls({
   canPlay,
   canPass,
   selectedCount,
+  selectedLabels = [],
+  playLabel = null,
+  turnDeadlineAt = null,
   errorMessage,
   onSelectInterpretation,
   onPlay,
   onPass,
   onClear,
 }: GameControlsProps) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (
+        event.repeat ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        document.querySelector('[role="dialog"][aria-modal="true"]') ||
+        target?.matches("input, textarea, select, [contenteditable='true']")
+      ) return;
+      if (event.key === "Enter" && canPlay) {
+        event.preventDefault();
+        onPlay();
+      } else if (event.key === "Escape" && selectedCount > 0) {
+        event.preventDefault();
+        onClear();
+      } else if (event.key.toLowerCase() === "p" && canPass) {
+        event.preventDefault();
+        onPass();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canPass, canPlay, onClear, onPass, onPlay, selectedCount]);
+
   return (
     <section className={`control-panel ${styles.panel}`} aria-label="Game controls">
+      <TurnIndicator deadlineAt={turnDeadlineAt} owner="You" isLocal compact />
       <div className={styles.promptBlock}>
-        <span className={styles.turnLabel}>Your Turn</span>
         <p className={styles.prompt}>{prompt}</p>
         <p className={`${styles.feedback} ${styles[selectionTone]}`} aria-live="polite">
           {selectionMessage}
@@ -75,20 +111,30 @@ export function GameControls({
         </fieldset>
       ) : null}
 
+      <div className={`${styles.selectionTray} ${styles[selectionTone]}`} aria-label={`${selectedCount} selected cards`}>
+        <span>Selected · {selectedCount} {selectedCount === 1 ? "Card" : "Cards"}</span>
+        <div className={styles.selectedChips}>
+          {selectedLabels.length > 0
+            ? selectedLabels.map((label, index) => <i key={`${label}-${index}`}>{label}</i>)
+            : <small>No cards selected</small>}
+        </div>
+        <strong>{playLabel ?? (selectedCount > 0 ? "Check combination…" : "Choose from your hand")}</strong>
+      </div>
+
       <div className={styles.actions}>
         <button
           type="button"
           disabled={!canPass}
           onClick={onPass}
         >
-          Pass
+          Pass <kbd>P</kbd>
         </button>
         <button
           type="button"
           disabled={selectedCount === 0}
           onClick={onClear}
         >
-          Clear
+          Clear <kbd>Esc</kbd>
         </button>
         <button
           type="button"
@@ -96,7 +142,12 @@ export function GameControls({
           disabled={!canPlay}
           onClick={onPlay}
         >
-          Play {selectedCount > 0 ? selectedCount : ""}
+          {canPlay
+            ? `Play · ${playLabel ?? selectedCount}`
+            : selectedCount > 0
+              ? "Invalid Selection"
+              : "Play"}
+          <kbd>Enter</kbd>
         </button>
       </div>
     </section>

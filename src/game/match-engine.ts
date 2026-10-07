@@ -24,7 +24,6 @@ import {
   type RoundActionError,
 } from "./round-engine";
 import type { RoundOutcome, RoundState } from "./round-state";
-import { SEATS } from "./types";
 import type { Card, Seat, TeamId } from "./types";
 
 export type MatchEnginePhase =
@@ -95,6 +94,7 @@ export type MatchEngineState =
 export type CreateMatchEngineStateInput = {
   shuffledDeck: readonly Card[];
   revealedCardId: string;
+  startingSeat: Seat;
   initialMatch?: CreateMatchStateInput;
 };
 
@@ -228,17 +228,6 @@ function invalidPhase(
   });
 }
 
-function findRevealedCardHolder(
-  hands: ReturnType<typeof dealCards>,
-  revealedCardId: string,
-): Seat | null {
-  return (
-    SEATS.find((seat) =>
-      hands[seat].some((card) => card.id === revealedCardId),
-    ) ?? null
-  );
-}
-
 function createActiveRound(
   hands: ReturnType<typeof dealCards>,
   currentLevelRank: MatchState["currentLevelRank"],
@@ -254,6 +243,7 @@ function createActiveRound(
 export function createMatchEngineState({
   shuffledDeck,
   revealedCardId,
+  startingSeat,
   initialMatch = {
     teamLevels: { A: "2", B: "2" },
     activeLevelTeam: "A",
@@ -271,10 +261,6 @@ export function createMatchEngineState({
   }
 
   const hands = dealCards(shuffledDeck);
-  const startingSeat = findRevealedCardHolder(hands, revealedCardId);
-  if (startingSeat === null) {
-    return { success: false, error: "INVALID_REVEALED_CARD" };
-  }
 
   const matchState = createMatchState(initialMatch) as InProgressMatchState;
 

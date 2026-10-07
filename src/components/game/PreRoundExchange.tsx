@@ -6,6 +6,7 @@ import type { PreRoundExchangeMatchEngineState } from "../../game/match-engine";
 import type { Seat } from "../../game/types";
 import { playerLabel } from "../../lib/game-ui";
 import { PlayerHand } from "./PlayerHand";
+import styles from "./PreRoundExchange.module.css";
 
 type PreRoundExchangeProps = {
   state: PreRoundExchangeMatchEngineState;
@@ -74,64 +75,60 @@ export function PreRoundExchange({
   const exchange = state.preRoundState;
 
   return (
-    <main className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 pb-8 sm:px-6">
-      <section className="exchange-banner">
-        <div>
-          <span className="section-kicker">Between rounds</span>
-          <h2 className="mt-1 text-2xl font-black text-white">
-            Tribute & Return Tribute
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm text-white/65">
-            The engine has dealt the next round. Complete the required physical-card exchange before play resumes.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <main className={styles.stage}>
+      <span className={styles.cloud} aria-hidden="true">云</span>
+      <section className={styles.panel}>
+        <span className={styles.kicker}>Between rounds</span>
+        <h2>Tribute &amp; Return Tribute</h2>
+        <p className={styles.summary}>
+          Complete the required card exchange before the next lead.
+        </p>
+
+        <div className={styles.counts} aria-label="Player card counts">
           {exchange.hands.map((hand, seat) => (
-            <div key={seat} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
-              <span className="block text-xs text-white/45">Player {seat + 1}</span>
-              <strong className="text-sm text-white">{hand.length} cards</strong>
-            </div>
+            <span key={seat}>
+              <small>P{seat + 1}</small>
+              <strong>{hand.length}</strong>
+            </span>
           ))}
         </div>
-      </section>
 
-      {prompt ? (
-        <>
-          <div className="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-4">
-            <p className="text-lg font-black text-amber-100">{prompt.title}</p>
-            <p className="mt-1 text-sm text-amber-50/75">{prompt.instruction}</p>
-          </div>
-          <PlayerHand
-            seat={prompt.seat}
-            cards={exchange.hands[prompt.seat]}
-            currentLevelRank={exchange.currentLevelRank}
-            isCurrent
-            finishPosition={null}
-            selectedCardIds={new Set(selectedCardId ? [selectedCardId] : [])}
-            interactiveCardIds={prompt.optionIds}
-            onToggleCard={onSelectCard}
-          />
-          {errorMessage ? (
-            <p className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-100" role="alert">
-              {errorMessage}
-            </p>
-          ) : null}
-          <div className="flex justify-end">
+        {prompt ? (
+          <>
+            <div className={styles.prompt}>
+              <strong>{prompt.title}</strong>
+              <p>{prompt.instruction}</p>
+            </div>
+            <PlayerHand
+              seat={prompt.seat}
+              cards={exchange.hands[prompt.seat]}
+              currentLevelRank={exchange.currentLevelRank}
+              isCurrent
+              finishPosition={null}
+              selectedCardIds={new Set(selectedCardId ? [selectedCardId] : [])}
+              interactiveCardIds={prompt.optionIds}
+              fullSizeCards
+              appearance="primary"
+              onToggleCard={onSelectCard}
+            />
+            {errorMessage ? (
+              <p className={styles.error} role="alert">{errorMessage}</p>
+            ) : null}
             <button
               type="button"
-              className="button button--primary"
+              className={styles.submit}
               disabled={!selectedCardId}
               onClick={onSubmit}
             >
               {prompt.buttonLabel}
             </button>
+          </>
+        ) : (
+          <div className={styles.resolving}>
+            Resolving equal Tribute cards with local random choice…
           </div>
-        </>
-      ) : (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/70">
-          Resolving equal Tribute cards with local random choice…
-        </div>
-      )}
+        )}
+      </section>
     </main>
   );
 }

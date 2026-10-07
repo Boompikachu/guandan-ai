@@ -1,0 +1,82 @@
+.badge {
+  --rank-edge: #bc9253;
+  --rank-ink: #ead29e;
+  --rank-glow: rgb(188 146 83 / 16%);
+  display: inline-flex;
+  min-height: 1.75rem;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.28rem 0.62rem;
+  border: 1px solid color-mix(in srgb, var(--rank-edge) 62%, transparent);
+  border-radius: 999px;
+  color: var(--rank-ink);
+  background:
+    linear-gradient(135deg, var(--rank-glow), rgb(6 8 10 / 72%)),
+    #0b0d10;
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%), 0 0.4rem 1.4rem var(--rank-glow);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid var(--rank-edge);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8dc, var(--rank-edge) 48%, #17100a 100%);
+  box-shadow: 0 0 0.55rem var(--rank-glow);
+}
+
+.badge[data-rank="BRONZE"] {
+  --rank-edge: #9b6541;
+  --rank-ink: #c99368;
+  --rank-glow: rgb(126 72 39 / 18%);
+}
+
+.badge[data-rank="SILVER"] {
+  --rank-edge: #a5abae;
+  --rank-ink: #d3d6d5;
+  --rank-glow: rgb(176 187 191 / 14%);
+}
+
+.badge[data-rank="GOLD"] {
+  --rank-edge: #c69a48;
+  --rank-ink: #eccf8a;
+  --rank-glow: rgb(212 164 75 / 18%);
+}
+
+.badge[data-rank="PLATINUM"] {
+  --rank-edge: #b9c7bd;
+  --rank-ink: #e4eee5;
+  --rank-glow: rgb(188 215 201 / 16%);
+}
+
+.badge[data-rank="DIAMOND"] {
+  --rank-edge: #bcd5de;
+  --rank-ink: #f2fbff;
+  --rank-glow: rgb(180 226 241 / 20%);
+}
+
+.badge[data-rank="MASTER"] {
+  --rank-edge: #bd7b3d;
+  --rank-ink: #f0ca72;
+  --rank-glow: rgb(165 50 35 / 20%);
+}
+
+.badge[data-rank="GRANDMASTER"] {
+  --rank-edge: #deb75d;
+  --rank-ink: #f6dc95;
+  --rank-glow: rgb(222 183 93 / 24%);
+  background:
+    linear-gradient(135deg, rgb(218 170 71 / 16%), rgb(3 4 5 / 92%)),
+    #030405;
+}
+
+.compact {
+  min-height: 1.4rem;
+  padding: 0.18rem 0.44rem;
+  font-size: 0.56rem;
+}

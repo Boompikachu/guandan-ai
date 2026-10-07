@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import { getOrCreateAnonymousPlayerId } from "../lib/competitive-identity";
 import type {
   ClientRoomView,
   ClientToServerEvents,
   MutationAck,
+  LeaveRoomAck,
+  PublicRoomSummary,
   RoomSessionCredentials,
+  RoomVisibility,
   ServerToClientEvents,
   SessionAck,
 } from "../shared/multiplayer-protocol";
@@ -53,10 +57,13 @@ function saveSession(session: RoomSessionCredentials | null): void {
 export function useOnlineRoom() {
   const socketRef = useRef<OnlineSocket | null>(null);
   const sessionRef = useRef<RoomSessionCredentials | null>(null);
+  const playerIdRef = useRef<string | null>(null);
   const [view, setView] = useState<ClientRoomView | null>(null);
+  const [publicRooms, setPublicRooms] = useState<PublicRoomSummary[]>([]);
   const [connectionStatus, setConnectionStatus] =
     useState<OnlineConnectionStatus>("RECONNECTING");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cancelledMatchMessage, setCancelledMatchMessage] = useState<string | null>(null);
 
   const acceptView = useCallback((nextView: ClientRoomView) => {
     setView((current) =>
@@ -74,6 +81,7 @@ export function useOnlineRoom() {
     saveSession(result.session);
     acceptView(result.view);
     setErrorMessage(null);
+    setCancelledMatchMessage(null);
     return true;
   }, [acceptView]);
 
@@ -81,9 +89,22 @@ export function useOnlineRoom() {
     const socket: OnlineSocket = io({ autoConnect: false });
     socketRef.current = socket;
     sessionRef.current = readStoredSession();
+    playerIdRef.current = getOrCreateAnonymousPlayerId();
 
     socket.on("room:view", acceptView);
+    socket.on("rooms:public", setPublicRooms);
     socket.on("room:error", (error) => setErrorMessage(error.message));
+    socket.on("room:closed", (notice) => {
+      sessionRef.current = null;
+      saveSession(null);
+      setView(null);
+      setErrorMessage(null);
+      if (notice.reason === "PLAYER_LEFT_MATCH") {
+        setCancelledMatchMessage(notice.message);
+      } else {
+        window.history.replaceState(null, "", "/");
+      }
+    });
     socket.on("connect", () => {
       setConnectionStatus("CONNECTED");
       const session = sessionRef.current;
@@ -116,14 +137,23 @@ export function useOnlineRoom() {
     };
   }, [acceptSession, acceptView]);
 
-  const createRoom = useCallback(async (displayName: string): Promise<boolean> => {
+  const createRoom = useCallback(async (
+    displayName: string,
+    visibility: RoomVisibility = "PUBLIC",
+  ): Promise<boolean> => {
     const socket = socketRef.current;
     if (!socket?.connected) {
       setErrorMessage("The server is not connected yet.");
       return false;
     }
     return new Promise((resolve) => {
-      socket.emit("room:create", { displayName }, (result) => resolve(acceptSession(result)));
+      const playerId = playerIdRef.current ?? getOrCreateAnonymousPlayerId();
+      playerIdRef.current = playerId;
+      socket.emit(
+        "room:create",
+        { displayName, visibility, playerId },
+        (result) => resolve(acceptSession(result)),
+      );
     });
   }, [acceptSession]);
 
@@ -135,9 +165,11 @@ export function useOnlineRoom() {
         return false;
       }
       return new Promise((resolve) => {
+        const playerId = playerIdRef.current ?? getOrCreateAnonymousPlayerId();
+        playerIdRef.current = playerId;
         socket.emit(
           "room:join",
-          { roomCode: roomCode.trim().toUpperCase(), displayName },
+          { roomCode: roomCode.trim().toUpperCase(), displayName, playerId },
           (result) => resolve(acceptSession(result)),
         );
       });
@@ -181,6 +213,20 @@ export function useOnlineRoom() {
     [runMutation],
   );
 
+  const rollOpeningDice = useCallback(
+    () =>
+      runMutation((acknowledge) =>
+        socketRef.current?.emit("game:roll-dice", {}, acknowledge)),
+    [runMutation],
+  );
+
+  const flipOpeningCard = useCallback(
+    () =>
+      runMutation((acknowledge) =>
+        socketRef.current?.emit("game:flip-card", {}, acknowledge)),
+    [runMutation],
+  );
+
   const play = useCallback(
     (cardIds: string[], interpretationKey?: string) =>
       runMutation((acknowledge) =>
@@ -213,32 +259,50 @@ export function useOnlineRoom() {
     [runMutation],
   );
 
-  const returnHome = useCallback(() => {
-    sessionRef.current = null;
-    saveSession(null);
-    setView(null);
-    setErrorMessage(null);
+  const leaveRoom = useCallback(async (): Promise<boolean> => {
     const socket = socketRef.current;
-    if (socket) {
-      socket.disconnect();
-      socket.connect();
+    if (!socket?.connected) {
+      setErrorMessage("Reconnect before intentionally leaving this table.");
+      return false;
     }
+    return new Promise((resolve) => {
+      socket.emit("room:leave", {}, (result: LeaveRoomAck) => {
+        if (!result.success) {
+          setErrorMessage(result.error.message);
+          resolve(false);
+          return;
+        }
+        sessionRef.current = null;
+        saveSession(null);
+        setView(null);
+        setErrorMessage(null);
+        window.history.replaceState(null, "", "/");
+        resolve(true);
+      });
+    });
   }, []);
 
   return {
     view,
+    publicRooms,
     connectionStatus,
     errorMessage,
+    cancelledMatchMessage,
     clearError: () => setErrorMessage(null),
+    clearCancelledMatch: () => {
+      setCancelledMatchMessage(null);
+      window.history.replaceState(null, "", "/");
+    },
     createRoom,
     joinRoom,
     setReady,
     startMatch,
+    rollOpeningDice,
+    flipOpeningCard,
     play,
     pass,
     submitTribute,
     submitReturn,
-    returnHome,
+    leaveRoom,
   };
 }
-

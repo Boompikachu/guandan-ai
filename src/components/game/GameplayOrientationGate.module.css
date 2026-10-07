@@ -1,0 +1,81 @@
+.gate {
+  position: fixed;
+  z-index: 1400;
+  inset: 0;
+  display: none;
+  place-content: center;
+  justify-items: center;
+  padding: 2rem;
+  color: #eee5d2;
+  background:
+    radial-gradient(circle at 50% 32%, rgb(190 139 62 / 15%), transparent 15rem),
+    repeating-linear-gradient(35deg, rgb(255 255 255 / 1.5%) 0 1px, transparent 1px 5px),
+    #040708;
+  text-align: center;
+}
+
+.gate::before {
+  position: absolute;
+  inset: 1rem;
+  border: 1px solid rgb(229 188 107 / 30%);
+  border-radius: 1.3rem;
+  content: "";
+  pointer-events: none;
+}
+
+.icon {
+  width: 6rem;
+  fill: none;
+  stroke: #d9b466;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 1.2rem rgb(229 188 107 / 24%));
+}
+
+.gate > span {
+  margin-top: 1.3rem;
+  color: #b78943;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.gate h2 {
+  margin: 0.45rem 0 0;
+  color: #f1d99f;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 11vw, 3rem);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gate p {
+  margin: 0.7rem 0 0;
+  color: #9caaa6;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.gate button {
+  min-height: 2.8rem;
+  margin-top: 1.4rem;
+  padding: 0.55rem 1.2rem;
+  border: 1px solid #e3bd70;
+  border-radius: 0.65rem;
+  color: #16110a;
+  background: linear-gradient(180deg, #f0d18d, #bd853a);
+  font-weight: 900;
+}
+
+.gate small {
+  max-width: 19rem;
+  margin-top: 0.8rem;
+  color: #b9a783;
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) and (orientation: portrait) and (pointer: coarse) {
+  .gate { display: grid; }
+}

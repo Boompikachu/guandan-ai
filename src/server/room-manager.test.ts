@@ -3,6 +3,7 @@ import { createDeck } from "../game/deck";
 import type {
   AwaitingNextRoundDeckMatchEngineState,
   InProgressMatchState,
+  MatchCompleteMatchEngineState,
 } from "../game/match-engine";
 import { createMatchState } from "../game/match-state";
 import type { DoubleDownRoundOutcome, NormalRoundOutcome } from "../game/round-state";
@@ -10,8 +11,11 @@ import type { Card, Hands, Seat } from "../game/types";
 import type {
   ClientGameView,
   ClientLobbyView,
+  ClientOpeningView,
   SessionAck,
 } from "../shared/multiplayer-protocol";
+import { getOpeningStartingSeat } from "../shared/round-opening";
+import { InMemoryLeaderboardStore } from "./leaderboard-store";
 import {
   createDeterministicRandomSource,
   RoomManager,
@@ -40,12 +44,36 @@ function createStartedRoom() {
     expect(setup.manager.setReady(session.reconnectToken, true).success).toBe(true);
   }
   expect(setup.manager.startMatch(setup.sessions[0].reconnectToken).success).toBe(true);
+  completeOpening(setup.manager, setup.sessions, setup.code);
   return setup;
+}
+
+function completeOpening(
+  manager: RoomManager,
+  sessions: readonly { reconnectToken: string }[],
+  code: string,
+) {
+  for (const session of sessions) {
+    expect(manager.rollOpeningDice(session.reconnectToken).success).toBe(true);
+  }
+  const opening = manager.getRoom(code)?.opening;
+  const flipperSeat = opening?.diceContest.flipperSeat;
+  if (flipperSeat === null || flipperSeat === undefined) {
+    throw new Error("Expected a unique Flipper.");
+  }
+  expect(manager.flipOpeningCard(sessions[flipperSeat]!.reconnectToken).success).toBe(true);
+  expect(manager.completeOpening(code).success).toBe(true);
 }
 
 function gameView(manager: RoomManager, code: string, token: string): ClientGameView {
   const view = manager.getView(code, token);
   if (!view || view.phase !== "GAME") throw new Error("Expected game view.");
+  return view;
+}
+
+function openingView(manager: RoomManager, code: string, token: string): ClientOpeningView {
+  const view = manager.getView(code, token);
+  if (!view || view.phase !== "OPENING") throw new Error("Expected opening view.");
   return view;
 }
 
@@ -57,6 +85,8 @@ function playerRecords(): RoomRecord["players"] {
     name: `Player ${seat + 1}`,
     ready: true,
     connectionIds: new Set([`socket-${seat}`]),
+    competitivePlayerId: `competitive-player-${seat}`,
+    rating: 1000,
   })) as RoomRecord["players"];
 }
 
@@ -78,16 +108,142 @@ function waitingMatch(outcome: NormalRoundOutcome | DoubleDownRoundOutcome) {
 function roomWithMatch(match: AwaitingNextRoundDeckMatchEngineState): RoomRecord {
   return {
     code: "ABC234",
+    visibility: "PUBLIC",
     hostPlayerId: "player-0",
     players: playerRecords(),
     status: "ACTIVE",
     match,
+    opening: null,
+    matchResultId: "match-result-fixture",
+    ratingResults: {},
+    turnDeadlineAt: null,
+    turnSequence: 0,
     revision: 10,
     events: [],
     createdAt: 1,
     lastActivityAt: 1,
   };
 }
+
+describe("RoomManager public room directory", () => {
+  it("lists only joinable public lobbies with a sanitized summary", () => {
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234", "DEF567"] }),
+    );
+    const publicSession = successfulSession(
+      manager.createRoom("Alice", "public-socket", "PUBLIC"),
+    );
+    const privateSession = successfulSession(
+      manager.createRoom("Bob", "private-socket", "PRIVATE"),
+    );
+
+    expect(manager.listPublicRooms()).toEqual([
+      {
+        code: publicSession.roomCode,
+        hostDisplayName: "Alice",
+        playerCount: 1,
+        maxPlayers: 4,
+        status: "WAITING",
+      },
+    ]);
+    expect(Object.keys(manager.listPublicRooms()[0] ?? {}).sort()).toEqual([
+      "code",
+      "hostDisplayName",
+      "maxPlayers",
+      "playerCount",
+      "status",
+    ]);
+    expect(JSON.stringify(manager.listPublicRooms())).not.toMatch(/token|hand|match/i);
+
+    expect(manager.joinRoom(privateSession.roomCode, "Carol", "private-join").success)
+      .toBe(true);
+    expect(manager.listPublicRooms()).toHaveLength(1);
+  });
+
+  it("updates occupancy and hides full, started, and cleaned rooms", () => {
+    let now = 1_000;
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234", "DEF567", "GHI890"] }),
+      [],
+      () => now,
+    );
+    const full = successfulSession(manager.createRoom("Alice", "full-0"));
+    manager.joinRoom(full.roomCode, "Bob", "full-1");
+    expect(manager.listPublicRooms()[0]?.playerCount).toBe(2);
+    manager.joinRoom(full.roomCode, "Carol", "full-2");
+    manager.joinRoom(full.roomCode, "Dev", "full-3");
+    expect(manager.listPublicRooms()).toHaveLength(0);
+    expect(manager.joinRoom(full.roomCode, "Eve", "full-4")).toMatchObject({
+      success: false,
+      error: { code: "ROOM_FULL" },
+    });
+
+    const started = successfulSession(manager.createRoom("Host", "started-0"));
+    const startedSessions = [
+      started,
+      successfulSession(manager.joinRoom(started.roomCode, "P2", "started-1")),
+      successfulSession(manager.joinRoom(started.roomCode, "P3", "started-2")),
+      successfulSession(manager.joinRoom(started.roomCode, "P4", "started-3")),
+    ];
+    for (const session of startedSessions) manager.setReady(session.reconnectToken, true);
+    expect(manager.startMatch(started.reconnectToken).success).toBe(true);
+    expect(manager.listPublicRooms()).toHaveLength(0);
+
+    const abandoned = successfulSession(manager.createRoom("Gone", "gone-0"));
+    manager.disconnectConnection("gone-0");
+    now += 60_000;
+    expect(manager.cleanupAbandonedRooms(60_000)).toBe(1);
+    expect(manager.getRoom(abandoned.roomCode)).toBeNull();
+    expect(manager.listPublicRooms()).toHaveLength(0);
+  });
+});
+
+describe("RoomManager intentional leave", () => {
+  it("releases a lobby seat, updates public occupancy, and invalidates explicit resume", () => {
+    const manager = new RoomManager(createDeterministicRandomSource({ roomCodes: ["ABC234"] }));
+    const host = successfulSession(manager.createRoom("Alice", "socket-0"));
+    const guest = successfulSession(manager.joinRoom(host.roomCode, "Bob", "socket-1"));
+    expect(manager.leaveRoom(guest.reconnectToken)).toMatchObject({
+      success: true,
+      roomDeleted: false,
+      matchCancelled: false,
+    });
+    expect(manager.listPublicRooms()[0]?.playerCount).toBe(1);
+    expect(manager.resumeRoom(host.roomCode, guest.reconnectToken, "socket-new")).toMatchObject({
+      success: false,
+      error: { code: "INVALID_SESSION" },
+    });
+  });
+
+  it("transfers host to the earliest remaining player and deletes an empty room", () => {
+    let now = 100;
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234"] }),
+      [],
+      () => now++,
+    );
+    const host = successfulSession(manager.createRoom("Alice", "socket-0"));
+    const firstGuest = successfulSession(manager.joinRoom(host.roomCode, "Bob", "socket-1"));
+    const laterGuest = successfulSession(manager.joinRoom(host.roomCode, "Carol", "socket-2"));
+    expect(manager.leaveRoom(host.reconnectToken).success).toBe(true);
+    expect(manager.getView(host.roomCode, firstGuest.reconnectToken)?.self.isHost).toBe(true);
+    expect(manager.getView(host.roomCode, laterGuest.reconnectToken)?.self.isHost).toBe(false);
+    manager.leaveRoom(firstGuest.reconnectToken);
+    manager.leaveRoom(laterGuest.reconnectToken);
+    expect(manager.getRoom(host.roomCode)).toBeNull();
+  });
+
+  it("cancels an active room without manufacturing a winner or outcome", () => {
+    const { manager, sessions, code } = createStartedRoom();
+    const result = manager.leaveRoom(sessions[1].reconnectToken);
+    expect(result).toMatchObject({ success: true, roomDeleted: true, matchCancelled: true });
+    expect(manager.getRoom(code)).toBeNull();
+    expect(manager.resumeRoom(code, sessions[0].reconnectToken, "replacement")).toMatchObject({
+      success: false,
+      error: { code: "ROOM_NOT_FOUND" },
+    });
+  });
+});
 
 function card(rank: Card["rank"], deckIndex: 0 | 1): Card {
   const found = createDeck().find(
@@ -207,7 +363,219 @@ describe("RoomManager room and lobby lifecycle", () => {
     const lobby = manager.getView(code, sessions[0].reconnectToken) as ClientLobbyView;
     expect(lobby.canStart).toBe(true);
     expect(manager.startMatch(sessions[0].reconnectToken).success).toBe(true);
+    expect(manager.getRoom(code)?.match).toBeNull();
+    expect(manager.getRoom(code)?.opening?.stage).toBe("WAITING_FOR_DICE");
+    completeOpening(manager, sessions, code);
     expect(manager.getRoom(code)?.match?.phase).toBe("ROUND_IN_PROGRESS");
+  });
+});
+
+describe("RoomManager authoritative opening ceremony", () => {
+  it("keeps hands undealt until every player rolls and the Flipper reveals the deck top", () => {
+    const { manager, sessions, code } = createFourPlayerLobby();
+    for (const session of sessions) manager.setReady(session.reconnectToken, true);
+    expect(manager.startMatch(sessions[0].reconnectToken).success).toBe(true);
+
+    const initialViews = sessions.map((session) =>
+      openingView(manager, code, session.reconnectToken));
+    expect(initialViews.every((view) => view.stage === "WAITING_FOR_DICE")).toBe(true);
+    expect(initialViews.every((view) => view.players.every((player) => player?.cardCount === 0)))
+      .toBe(true);
+    expect(initialViews.every((view) => !("ownHand" in view))).toBe(true);
+    expect(JSON.stringify(initialViews)).not.toContain("pendingDeck");
+
+    expect(manager.rollOpeningDice(sessions[0].reconnectToken).success).toBe(true);
+    expect(manager.rollOpeningDice(sessions[0].reconnectToken)).toMatchObject({
+      success: false,
+      error: { code: "INVALID_OPENING_ACTION" },
+    });
+    for (const session of sessions.slice(1)) {
+      expect(manager.rollOpeningDice(session.reconnectToken).success).toBe(true);
+    }
+
+    const beforeFlip = sessions.map((session) =>
+      openingView(manager, code, session.reconnectToken));
+    expect(beforeFlip.every((view) => view.flipperSeat === 0)).toBe(true);
+    expect(beforeFlip.map((view) => view.canFlip)).toEqual([true, false, false, false]);
+    expect(manager.flipOpeningCard(sessions[1].reconnectToken)).toMatchObject({
+      success: false,
+      error: { code: "INVALID_OPENING_ACTION" },
+    });
+    expect(manager.flipOpeningCard(sessions[0].reconnectToken).success).toBe(true);
+
+    const reveal = openingView(manager, code, sessions[0].reconnectToken);
+    const expectedCard = createDeck()[0]!;
+    expect(reveal).toMatchObject({
+      stage: "SHOWING_START_RESULT",
+      flipperSeat: 0,
+      revealedCard: expectedCard,
+      startingSeat: getOpeningStartingSeat(0, expectedCard),
+    });
+    expect(reveal.startingSeat).not.toBe(0);
+
+    const resumed = manager.resumeRoom(code, sessions[2].reconnectToken, "socket-2-resumed");
+    expect(resumed.success).toBe(true);
+    if (!resumed.success || resumed.view.phase !== "OPENING") return;
+    expect(resumed.view.rollRounds).toEqual(reveal.rollRounds);
+    expect(resumed.view.revealedCard).toEqual(expectedCard);
+    expect(resumed.view.startingSeat).toBe(reveal.startingSeat);
+
+    expect(manager.completeOpening(code).success).toBe(true);
+    const gameViews = sessions.map((session) => gameView(manager, code, session.reconnectToken));
+    expect(gameViews.every((view) => view.ownHand.length === 27)).toBe(true);
+    expect(gameViews[0]?.currentTurn).toBe(reveal.startingSeat);
+    expect(
+      gameViews.flatMap((view) => view.ownHand).filter((card) => card.id === expectedCard.id),
+    ).toHaveLength(1);
+  });
+
+  it("rerolls only repeatedly tied highest players using server-owned dice", () => {
+    const manager = new RoomManager(createDeterministicRandomSource({
+      roomCodes: ["ABC234"],
+      diceValues: [5, 5, 4, 6, 3, 3, 2, 2, 3, 4, 5, 2, 2, 2, 6, 1],
+    }));
+    const sessions = [
+      successfulSession(manager.createRoom("Alice", "socket-0")),
+      successfulSession(manager.joinRoom("ABC234", "Bob", "socket-1")),
+      successfulSession(manager.joinRoom("ABC234", "Carol", "socket-2")),
+      successfulSession(manager.joinRoom("ABC234", "Dev", "socket-3")),
+    ];
+    for (const session of sessions) manager.setReady(session.reconnectToken, true);
+    manager.startMatch(sessions[0].reconnectToken);
+    for (const session of sessions) manager.rollOpeningDice(session.reconnectToken);
+
+    let view = openingView(manager, "ABC234", sessions[0].reconnectToken);
+    expect(view.stage).toBe("DICE_TIE_REROLL");
+    expect(view.requiredRollers).toEqual([0, 1]);
+    expect(manager.rollOpeningDice(sessions[2].reconnectToken)).toMatchObject({
+      success: false,
+      error: { code: "INVALID_OPENING_ACTION" },
+    });
+
+    manager.rollOpeningDice(sessions[0].reconnectToken);
+    manager.rollOpeningDice(sessions[1].reconnectToken);
+    view = openingView(manager, "ABC234", sessions[0].reconnectToken);
+    expect(view.rollRounds).toHaveLength(3);
+    expect(view.requiredRollers).toEqual([0, 1]);
+
+    manager.rollOpeningDice(sessions[0].reconnectToken);
+    manager.rollOpeningDice(sessions[1].reconnectToken);
+    view = openingView(manager, "ABC234", sessions[0].reconnectToken);
+    expect(view.stage).toBe("WAITING_FOR_FLIP");
+    expect(view.flipperSeat).toBe(1);
+    expect(view.rollRounds.map((round) => round.eligibleSeats)).toEqual([
+      [0, 1, 2, 3],
+      [0, 1],
+      [0, 1],
+    ]);
+  });
+});
+
+describe("RoomManager competitive Rating integration", () => {
+  it("does not change Rating when an active four-human match is cancelled", () => {
+    const store = new InMemoryLeaderboardStore();
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234"] }),
+      [],
+      Date.now,
+      store,
+    );
+    const sessions = [
+      successfulSession(manager.createRoom(
+        "Alice",
+        "socket-0",
+        "PUBLIC",
+        "cancelled-alice-id-0001",
+      )),
+      successfulSession(manager.joinRoom(
+        "ABC234",
+        "Bob",
+        "socket-1",
+        "cancelled-bob-id-000001",
+      )),
+      successfulSession(manager.joinRoom(
+        "ABC234",
+        "Carol",
+        "socket-2",
+        "cancelled-carol-id-0001",
+      )),
+      successfulSession(manager.joinRoom(
+        "ABC234",
+        "Dev",
+        "socket-3",
+        "cancelled-dev-id-000001",
+      )),
+    ];
+    for (const session of sessions) manager.setReady(session.reconnectToken, true);
+    expect(manager.startMatch(sessions[0].reconnectToken).success).toBe(true);
+    expect(manager.leaveRoom(sessions[2].reconnectToken)).toMatchObject({
+      success: true,
+      matchCancelled: true,
+    });
+    const snapshot = manager.getLeaderboard("cancelled-alice-id-0001");
+    expect(snapshot.entries).toHaveLength(4);
+    expect(snapshot.entries.every(
+      (entry) => entry.rating === 1000 && entry.wins === 0 && entry.losses === 0,
+    )).toBe(true);
+    expect(snapshot.currentPlayer?.matchesPlayed).toBe(0);
+  });
+
+  it("records one authoritative completed match and exposes per-player results", () => {
+    const store = new InMemoryLeaderboardStore();
+    const finalOutcome: NormalRoundOutcome = {
+      type: "NORMAL",
+      firstPlace: 0,
+      secondPlace: 2,
+      thirdPlace: 1,
+      lastPlace: 3,
+      winningTeam: "A",
+      finishingOrder: [0, 2, 1, 3],
+    };
+    const completedMatch: MatchCompleteMatchEngineState = {
+      phase: "MATCH_COMPLETE",
+      matchState: {
+        teamLevels: { A: "A", B: "K" },
+        failedAAttempts: { A: 0, B: 0 },
+        activeLevelTeam: "A",
+        currentLevelRank: "A",
+        status: "COMPLETE",
+        winner: "A",
+      },
+      roundNumber: 9,
+      firstRoundRevealedCardId: createDeck()[0]!.id,
+      finalRoundOutcome: finalOutcome,
+    };
+    const room: RoomRecord = {
+      ...roomWithMatch(waitingMatch(finalOutcome)),
+      status: "COMPLETE",
+      match: completedMatch,
+      matchResultId: "authoritative-match-1",
+    };
+
+    const manager = new RoomManager(createDeterministicRandomSource(), [[room.code, room]], Date.now, store);
+    const winner = manager.getView(room.code, "session-0");
+    const loser = manager.getView(room.code, "session-1");
+    expect(winner?.phase).toBe("MATCH_COMPLETE");
+    expect(loser?.phase).toBe("MATCH_COMPLETE");
+    if (winner?.phase !== "MATCH_COMPLETE" || loser?.phase !== "MATCH_COMPLETE") return;
+    expect(winner.ratingResult).toMatchObject({ before: 1000, after: 1016, delta: 16 });
+    expect(loser.ratingResult).toMatchObject({ before: 1000, after: 984, delta: -16 });
+    expect(manager.getLeaderboard("competitive-player-0").currentPlayer).toMatchObject({
+      rating: 1016,
+      wins: 1,
+      matchesPlayed: 1,
+    });
+
+    const rehydrated = new RoomManager(
+      createDeterministicRandomSource(),
+      [[room.code, room]],
+      Date.now,
+      store,
+    );
+    expect(rehydrated.getLeaderboard("competitive-player-0").currentPlayer).toMatchObject({
+      rating: 1016,
+      matchesPlayed: 1,
+    });
   });
 });
 
@@ -320,6 +688,161 @@ describe("RoomManager authoritative play and personalized views", () => {
       success: false,
       error: { code: "INVALID_SESSION" },
     });
+  });
+});
+
+describe("RoomManager server-authoritative turn timer", () => {
+  function createTimedRoom() {
+    let now = 10_000;
+    const manager = new RoomManager(
+      createDeterministicRandomSource({ roomCodes: ["ABC234"] }),
+      [],
+      () => now,
+    );
+    const sessions = [
+      successfulSession(manager.createRoom("Alice", "socket-0")),
+      successfulSession(manager.joinRoom("ABC234", "Bob", "socket-1")),
+      successfulSession(manager.joinRoom("ABC234", "Carol", "socket-2")),
+      successfulSession(manager.joinRoom("ABC234", "Dev", "socket-3")),
+    ];
+    for (const session of sessions) manager.setReady(session.reconnectToken, true);
+    manager.startMatch(sessions[0]!.reconnectToken);
+    return {
+      manager,
+      sessions,
+      code: "ABC234",
+      now: () => now,
+      advance: (milliseconds: number) => { now += milliseconds; },
+    };
+  }
+
+  it("starts a 60-second server deadline only after opening reaches Round play", () => {
+    const setup = createTimedRoom();
+    expect(setup.manager.getRoom(setup.code)?.turnDeadlineAt).toBeNull();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const view = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    expect(view.turnDeadlineAt).toBe(setup.now() + 60_000);
+    expect(view.turnSequence).toBeGreaterThan(0);
+    expect(view.activeLevelTeam).toBe("A");
+  });
+
+  it("does not let reconnect, invalid actions, or client-side activity extend the deadline", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const first = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    const wrongSeat = (((first.currentTurn ?? 0) + 1) % 4) as Seat;
+    const wrongView = gameView(setup.manager, setup.code, setup.sessions[wrongSeat]!.reconnectToken);
+    setup.advance(5_000);
+    setup.manager.play(setup.sessions[wrongSeat]!.reconnectToken, [wrongView.ownHand[0]!.id]);
+    setup.manager.resumeRoom(setup.code, setup.sessions[0]!.reconnectToken, "resumed-socket");
+    const resumed = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    expect(resumed.turnDeadlineAt).toBe(first.turnDeadlineAt);
+    expect(resumed.turnSequence).toBe(first.turnSequence);
+  });
+
+  it("commits one deterministic legal Single when a leading turn expires", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const before = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    const actor = before.currentTurn;
+    if (actor === null || before.turnDeadlineAt === null) throw new Error("Missing timed turn.");
+    setup.advance(60_000);
+    expect(setup.manager.expireTurn(setup.code, before.turnSequence).success).toBe(true);
+    const after = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    expect(after.currentPlay?.combination.type).toBe("SINGLE");
+    expect(after.currentPlay?.physicalCards).toHaveLength(1);
+    expect(after.players[actor]?.cardCount).toBe(26);
+    expect(after.currentTurn).not.toBe(actor);
+    expect(after.turnDeadlineAt).toBe(setup.now() + 60_000);
+  });
+
+  it("automatically passes an expired responding turn", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    let view = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    setup.advance(60_000);
+    setup.manager.expireTurn(setup.code, view.turnSequence);
+    view = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    const respondingSeat = view.currentTurn;
+    setup.advance(60_000);
+    expect(setup.manager.expireTurn(setup.code, view.turnSequence).success).toBe(true);
+    const after = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    expect(after.currentTurn).not.toBe(respondingSeat);
+    expect(after.events[0]).toContain("automatically passed");
+  });
+
+  it("cancels the old timeout after a legal action and rejects stale expiry", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const before = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    const actor = before.currentTurn;
+    if (actor === null) throw new Error("Missing turn.");
+    const actorView = gameView(setup.manager, setup.code, setup.sessions[actor]!.reconnectToken);
+    setup.advance(12_000);
+    expect(setup.manager.play(
+      setup.sessions[actor]!.reconnectToken,
+      [actorView.ownHand[0]!.id],
+    ).success).toBe(true);
+    const after = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    expect(after.turnSequence).toBe(before.turnSequence + 1);
+    expect(after.turnDeadlineAt).toBe(setup.now() + 60_000);
+    expect(setup.manager.expireTurn(setup.code, before.turnSequence)).toMatchObject({
+      success: false,
+      error: { code: "STALE_ACTION" },
+    });
+  });
+
+  it("executes an expiry exactly once", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const before = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    setup.advance(60_000);
+    expect(setup.manager.expireTurn(setup.code, before.turnSequence).success).toBe(true);
+    const revision = setup.manager.getRoom(setup.code)?.revision;
+    expect(setup.manager.expireTurn(setup.code, before.turnSequence)).toMatchObject({
+      success: false,
+      error: { code: "STALE_ACTION" },
+    });
+    expect(setup.manager.getRoom(setup.code)?.revision).toBe(revision);
+  });
+
+  it("rejects a player action that arrives after the deadline as stale", () => {
+    const setup = createTimedRoom();
+    completeOpening(setup.manager, setup.sessions, setup.code);
+    const before = gameView(setup.manager, setup.code, setup.sessions[0]!.reconnectToken);
+    const actor = before.currentTurn;
+    if (actor === null) throw new Error("Missing turn.");
+    const actorView = gameView(setup.manager, setup.code, setup.sessions[actor]!.reconnectToken);
+    setup.advance(60_001);
+    expect(setup.manager.play(
+      setup.sessions[actor]!.reconnectToken,
+      [actorView.ownHand.at(-1)!.id],
+    )).toMatchObject({ success: false, error: { code: "STALE_ACTION" } });
+    expect(setup.manager.getRoom(setup.code)?.revision).toBe(before.revision + 1);
+  });
+
+  it("keeps Tribute phases untimed and starts a fresh timer on the next Round", () => {
+    const normalOutcome: NormalRoundOutcome = {
+      type: "NORMAL",
+      firstPlace: 0,
+      secondPlace: 1,
+      thirdPlace: 2,
+      lastPlace: 3,
+      winningTeam: "A",
+      finishingOrder: [0, 1, 2, 3],
+    };
+    let now = 20_000;
+    const room = roomWithMatch(waitingMatch(normalOutcome));
+    const manager = new RoomManager(
+      createDeterministicRandomSource(),
+      [[room.code, room]],
+      () => now,
+    );
+    manager.advanceAutomaticMatchPhases(room.code);
+    expect(manager.getRoom(room.code)?.match?.phase).toBe("PRE_ROUND_EXCHANGE");
+    expect(manager.getRoom(room.code)?.turnDeadlineAt).toBeNull();
+    now += 120_000;
+    expect(manager.expireDueTurns()).toEqual([]);
   });
 });
 

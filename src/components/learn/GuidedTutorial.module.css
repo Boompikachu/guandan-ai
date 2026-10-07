@@ -1,0 +1,473 @@
+.shell {
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  color: var(--ivory);
+  background: #05080a;
+}
+
+.header {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  min-height: 4.2rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem clamp(0.75rem, 2vw, 2rem);
+  border-bottom: 1px solid rgb(229 188 107 / 40%);
+  background: linear-gradient(180deg, #091013, #030708);
+  box-shadow: 0 0.8rem 2.2rem rgb(0 0 0 / 42%);
+}
+
+.brand { display: flex; align-items: center; gap: 0.65rem; color: #edd298; font-family: var(--font-display); font-size: 1.35rem; }
+.brand > span { display: grid; width: 2.2rem; height: 2.2rem; place-items: center; border: 1px solid rgb(229 188 107 / 48%); border-radius: 50%; font-size: 0.95rem; }
+.metrics { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 0.35rem; }
+.metrics > span { padding: 0.35rem 0.65rem; border-left: 1px solid rgb(229 188 107 / 13%); color: #788783; font-size: 0.57rem; font-weight: 850; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.metrics > span b { margin-left: 0.3rem; color: #e2c477; font-size: 0.78rem; }
+.metrics > section { flex: 0 1 auto; }
+.header nav { display: flex; gap: 0.45rem; }
+.header button { min-height: 2.3rem; padding: 0.4rem 0.7rem; border: 1px solid rgb(229 188 107 / 28%); border-radius: 0.55rem; color: #dbc48c; background: rgb(255 255 255 / 3%); font-size: 0.65rem; font-weight: 850; cursor: pointer; }
+.header .leave { color: #efb5aa; border-color: rgb(190 67 57 / 43%); }
+
+.tableFrame {
+  min-height: 0;
+  padding: clamp(0.4rem, 0.8vw, 0.75rem);
+  overflow: hidden;
+  background: repeating-linear-gradient(93deg, transparent 0 31px, rgb(0 0 0 / 14%) 32px 35px), linear-gradient(135deg, #24160d, #080605 38%, #20120b);
+}
+
+.table {
+  position: relative;
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-areas: ". top ." "left trick right" "bottom bottom bottom";
+  grid-template-columns: minmax(10rem, 0.78fr) minmax(24rem, 2.1fr) minmax(10rem, 0.78fr);
+  grid-template-rows: minmax(5rem, 0.46fr) minmax(8rem, 1fr) auto;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgb(229 188 107 / 42%);
+  border-radius: clamp(1.5rem, 4vw, 4rem);
+  background: radial-gradient(ellipse at 50% 42%, rgb(31 100 77 / 34%), transparent 52%), repeating-linear-gradient(30deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 4px), linear-gradient(145deg, #123e33, #06231e 58%, #031410);
+  box-shadow: inset 0 0 0 0.35rem rgb(0 0 0 / 28%), inset 0 0 6rem rgb(0 0 0 / 65%);
+}
+
+.top { grid-area: top; width: min(100%, 25rem); align-self: start; justify-self: center; }
+.left { grid-area: left; align-self: center; }
+.right { grid-area: right; align-self: center; }
+.trick { grid-area: trick; align-self: center; min-width: 0; }
+.bottom { grid-area: bottom; display: grid; min-width: 0; grid-template-columns: minmax(18rem, 0.78fr) minmax(22rem, 1.1fr); gap: 0.45rem; align-items: end; }
+.bottom > :global(.player-zone) { grid-column: 1 / -1; }
+
+.bot { position: relative; min-width: 0; padding: 0.45rem 0.55rem; border: 1px solid rgb(229 188 107 / 16%); border-radius: 0.85rem; background: rgb(2 14 14 / 72%); }
+.botCurrent { border-color: rgb(229 188 107 / 56%); box-shadow: 0 0 1.2rem rgb(229 188 107 / 13%); }
+.botTurn { position: absolute; z-index: 8; bottom: calc(100% + 0.28rem); left: 50%; pointer-events: none; transform: translateX(-50%); }
+.left .botTurn { top: 50%; right: calc(100% + 0.28rem); bottom: auto; left: auto; transform: translateY(-50%); }
+.right .botTurn { top: 50%; bottom: auto; left: calc(100% + 0.28rem); transform: translateY(-50%); }
+.botIdentity { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.45rem; }
+.botIdentity > span { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border: 1px solid rgb(229 188 107 / 38%); border-radius: 50%; color: #d7b66a; font-size: 0.65rem; }
+.botIdentity div { display: grid; min-width: 0; }
+.botIdentity strong { color: #e5ded0; font-size: 0.72rem; }
+.botIdentity small { color: #66b898; font-size: 0.48rem; }
+.botIdentity b { color: #a8b4ae; font-size: 0.57rem; white-space: nowrap; }
+.cardBacks { position: relative; width: min(100%, 8.2rem); height: 2.5rem; margin: 0.35rem auto 0; }
+.cardBacks i { position: absolute; top: 0; display: grid; width: 1.75rem; height: 2.35rem; place-items: center; border: 1px solid #93713e; border-radius: 0.2rem; color: #bd9452; background: repeating-linear-gradient(45deg, rgb(229 188 107 / 9%) 0 2px, transparent 2px 5px), #101a1e; box-shadow: 0 0.25rem 0.5rem rgb(0 0 0 / 45%); }
+.cardBacks i span { display: grid; width: 1rem; height: 1rem; place-items: center; border: 1px solid rgb(229 188 107 / 35%); border-radius: 50%; font-style: normal; font-size: 0.48rem; }
+.bot em { position: absolute; right: 0.45rem; bottom: 0.2rem; color: #e1bb65; font-size: 0.48rem; font-style: normal; }
+
+.coach {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1fr minmax(10rem, 0.72fr);
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgb(229 188 107 / 34%);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, rgb(8 25 24 / 94%), rgb(3 11 12 / 96%));
+}
+.coach > div { min-width: 0; }
+.coach span, .kicker { display: block; color: #d2a957; font-size: 0.52rem; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; }
+.coach strong { display: block; margin-top: 0.2rem; color: #f0dfb8; font-family: var(--font-display); font-size: 1rem; }
+.coach p { margin: 0.22rem 0 0; color: #9eaaa5; font-size: 0.64rem; line-height: 1.35; }
+.suggestion { padding-left: 0.7rem; border-left: 1px solid rgb(229 188 107 / 18%); }
+.suggestion button { margin-top: 0.4rem; padding: 0.32rem 0.65rem; border: 1px solid #d9b668; border-radius: 0.4rem; color: #1b140a; background: #d9b668; font-size: 0.56rem; font-weight: 900; cursor: pointer; }
+.tip { padding-left: 0.7rem; border-left: 1px solid rgb(229 188 107 / 18%); }
+.event { position: absolute; z-index: 4; top: 0.75rem; right: 0.9rem; max-width: 16rem; padding: 0.4rem 0.6rem; border: 1px solid rgb(229 188 107 / 20%); border-radius: 0.5rem; color: #bbb5a7; background: rgb(3 11 12 / 84%); font-size: 0.55rem; }
+
+.openingFrame {
+  min-height: 0;
+  padding: clamp(0.45rem, 1.2vw, 1rem);
+  overflow: auto;
+  background:
+    repeating-linear-gradient(93deg, transparent 0 31px, rgb(0 0 0 / 14%) 32px 35px),
+    linear-gradient(135deg, #24160d, #080605 38%, #20120b);
+}
+
+.openingTable {
+  display: grid;
+  width: min(100%, 78rem);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(0.8rem, 2vw, 1.5rem);
+  gap: clamp(0.6rem, 1.4vw, 1rem);
+  align-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(229 188 107 / 42%);
+  border-radius: clamp(1.2rem, 3vw, 3rem);
+  background:
+    radial-gradient(ellipse at 50% 42%, rgb(34 118 89 / 34%), transparent 56%),
+    repeating-linear-gradient(30deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #123e33, #06231e 58%, #031410);
+  box-shadow: inset 0 0 0 0.35rem rgb(0 0 0 / 28%), inset 0 0 6rem rgb(0 0 0 / 65%);
+}
+
+.openingCoach {
+  max-width: 52rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.openingCoach > span {
+  color: #d2a957;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.openingCoach h1 {
+  margin: 0.25rem 0 0;
+  color: #f0deb4;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 3rem);
+  font-weight: 600;
+}
+
+.openingCoach p {
+  margin: 0.35rem auto 0;
+  color: #a7b2ad;
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.openingSeats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.openingSeat {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid rgb(229 188 107 / 18%);
+  border-radius: 0.8rem;
+  background: rgb(2 17 15 / 78%);
+  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.openingSeatEligible { border-color: rgb(229 188 107 / 36%); }
+.openingSeatOut { opacity: 0.48; }
+.openingSeatFlipper { border-color: #e1b85e; box-shadow: 0 0 1.4rem rgb(225 184 94 / 22%); }
+.openingSeatStarter { opacity: 1; border-color: #f0cc76; box-shadow: 0 0 0 2px rgb(240 204 118 / 15%), 0 0 1.8rem rgb(240 204 118 / 28%); }
+
+.openingSeatHeading {
+  display: grid;
+  justify-items: center;
+}
+
+.openingSeatHeading span {
+  color: #788783;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.openingSeatHeading strong {
+  margin-top: 0.1rem;
+  color: #ede2ca;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+}
+
+.dicePair {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.die {
+  width: 2.15rem;
+  height: 2.15rem;
+  filter: drop-shadow(0 0.35rem 0.35rem rgb(0 0 0 / 38%));
+}
+
+.die rect {
+  fill: #eee4ce;
+  stroke: #c59b4f;
+  stroke-width: 2;
+}
+
+.die circle { fill: #25190f; }
+
+.diceTotal {
+  color: #c7ba9d;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.openingSeat em {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.4rem;
+  color: #eac778;
+  font-size: 0.46rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.openingSeat em + em { top: auto; right: auto; bottom: 0.25rem; }
+
+.openingCenter {
+  display: flex;
+  min-height: 7rem;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.pendingDeck {
+  position: relative;
+  display: grid;
+  width: 5.2rem;
+  height: 6.8rem;
+  place-items: end center;
+}
+
+.pendingDeck i {
+  position: absolute;
+  inset: 0.2rem 0.55rem 1.25rem;
+  border: 2px solid #bd934d;
+  border-radius: 0.55rem;
+  background:
+    radial-gradient(circle, transparent 32%, rgb(222 180 92 / 18%) 33% 35%, transparent 36%),
+    repeating-linear-gradient(45deg, rgb(229 188 107 / 8%) 0 3px, transparent 3px 7px),
+    #10191d;
+  box-shadow: 0 0.55rem 1rem rgb(0 0 0 / 40%);
+}
+
+.pendingDeck i:nth-child(1) { transform: translate(-0.34rem, -0.25rem) rotate(-3deg); }
+.pendingDeck i:nth-child(2) { transform: translate(0.28rem, -0.12rem) rotate(2deg); }
+.pendingDeck i:nth-child(3) { transform: none; }
+.pendingDeck span { z-index: 2; color: #b3a788; font-size: 0.52rem; font-weight: 850; white-space: nowrap; }
+
+.flippedCard {
+  display: grid;
+  justify-items: center;
+  gap: 0.18rem;
+}
+
+.flippedCard :global(.playing-card:disabled) { opacity: 1; }
+.flippedCard strong { color: #f0d58f; font-family: var(--font-display); font-size: 0.82rem; }
+.flippedCard span { color: #a9b3ae; font-size: 0.55rem; font-weight: 850; text-transform: uppercase; }
+
+.clockwiseCount {
+  display: flex;
+  min-width: 0;
+  justify-content: center;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.clockwiseCount span {
+  display: grid;
+  min-width: 3.5rem;
+  justify-items: center;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgb(229 188 107 / 18%);
+  border-radius: 0.45rem;
+  color: #9eaaa5;
+  background: rgb(0 0 0 / 18%);
+  font-size: 0.48rem;
+}
+
+.clockwiseCount b { color: #d7b467; font-size: 0.7rem; }
+.clockwiseCount .countWinner { color: #f0e0bb; border-color: #e4be69; background: rgb(228 190 105 / 13%); }
+
+.jokerRuleBanner {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #a9b3ae;
+  font-size: 0.67rem;
+}
+
+.jokerRuleBanner strong { color: #e7c672; text-transform: uppercase; }
+
+.openingActions {
+  display: grid;
+  min-height: 2.8rem;
+  place-items: center;
+}
+
+.openingActions button {
+  min-width: min(100%, 18rem);
+  min-height: 2.8rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #efd08a;
+  border-radius: 0.6rem;
+  color: #171108;
+  background: linear-gradient(180deg, #f0d38e, #bd8337);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.openingActions button:disabled { color: #887d67; border-color: rgb(229 188 107 / 18%); background: rgb(0 0 0 / 22%); cursor: wait; }
+.dealingPulse, .resultPause { color: #e4c36f; font-size: 0.72rem; font-weight: 850; letter-spacing: 0.06em; text-transform: uppercase; }
+.dealingPulse { animation: dealingPulse 700ms ease-in-out infinite alternate; }
+
+.openingLesson {
+  display: grid;
+  max-width: 54rem;
+  margin: 0 auto;
+  justify-items: center;
+  gap: 0.2rem;
+  color: #8f9e99;
+  text-align: center;
+}
+
+.openingLesson strong { color: #dcc17f; font-family: var(--font-display); font-size: 0.82rem; }
+.openingLesson span { font-size: 0.63rem; line-height: 1.45; }
+.openingLesson small { color: #aa9466; font-size: 0.53rem; }
+
+@keyframes dealingPulse {
+  from { opacity: 0.5; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(-0.12rem); }
+}
+
+.exchange { display: grid; min-height: 0; align-content: center; gap: 1rem; padding: 1.5rem max(1rem, 8vw); overflow: hidden; color: #e9e0cb; background: radial-gradient(circle at 50% 25%, rgb(93 64 28 / 30%), transparent 24rem), linear-gradient(145deg, #14201f, #05090a); text-align: center; }
+.exchange h2 { margin: 0.5rem 0 0; color: #edd5a0; font-family: var(--font-display); font-size: 2rem; }
+.exchange p { max-width: 42rem; margin: 0.5rem auto 0; color: #9eaaa6; line-height: 1.5; }
+.exchangeSubmit { justify-self: center; min-height: 2.8rem; padding: 0.55rem 1.2rem; border: 1px solid #e6c477; border-radius: 0.6rem; color: #171108; background: linear-gradient(#efd38e, #bf873b); font-weight: 900; }
+.exchangeSubmit:disabled { opacity: 0.4; }
+.thinking { color: #d1b878; font-size: 0.8rem; }
+
+.onboarding { min-height: 100svh; display: grid; place-items: center; padding: 1.2rem; color: #ebe4d5; background: radial-gradient(circle at 72% 22%, rgb(202 147 64 / 15%), transparent 25rem), repeating-linear-gradient(35deg, rgb(255 255 255 / 1.5%) 0 1px, transparent 1px 5px), linear-gradient(135deg, #05090c, #10181b 55%, #080503); }
+.onboardingCard { position: relative; width: min(100%, 72rem); padding: clamp(1.5rem, 5vw, 4rem); border: 1px solid rgb(229 188 107 / 42%); border-radius: 1.4rem; background: linear-gradient(145deg, rgb(13 22 26 / 94%), rgb(3 8 10 / 96%)); box-shadow: 0 2rem 7rem rgb(0 0 0 / 52%); }
+.homeLink { position: absolute; top: 1.2rem; right: 1.3rem; color: #cbb27b; font-size: 0.72rem; font-weight: 800; text-decoration: none; }
+.onboarding h1 { margin: 0.5rem 0 0; color: #f1d9a0; font-family: var(--font-display); font-size: clamp(3rem, 7vw, 6rem); font-weight: 600; line-height: 0.9; }
+.onboardingCard > p { max-width: 49rem; margin: 1.1rem 0 0; color: #a7b2af; font-family: var(--font-display); font-size: clamp(1rem, 1.7vw, 1.35rem); line-height: 1.55; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 2rem; }
+.steps article { display: grid; align-content: start; min-height: 9rem; padding: 1rem; border: 1px solid rgb(229 188 107 / 18%); border-radius: 0.8rem; background: rgb(255 255 255 / 2.5%); }
+.steps b { color: #b98b43; font-family: var(--font-display); font-size: 1.6rem; }
+.steps strong { margin-top: 0.6rem; color: #e9d7ae; font-size: 0.82rem; }
+.steps span { margin-top: 0.35rem; color: #879491; font-size: 0.7rem; line-height: 1.45; }
+.onboardingActions { display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1.5rem; }
+.onboardingActions button { min-height: 3rem; padding: 0.6rem 1.1rem; border: 1px solid rgb(229 188 107 / 30%); border-radius: 0.6rem; color: #ddc590; background: rgb(255 255 255 / 3%); font-weight: 850; }
+.onboardingActions .start { color: #171108; border-color: #efd08a; background: linear-gradient(180deg, #f0d38e, #bd8337); }
+
+@media (max-width: 760px) {
+  .steps { grid-template-columns: 1fr; }
+  .steps article { min-height: auto; }
+  .onboarding { align-items: start; overflow-y: auto; }
+  .onboardingActions { flex-direction: column; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .header { min-height: 2.55rem; gap: 0.4rem; padding: 0.2rem 0.45rem; }
+  .brand { font-size: 0.9rem; }
+  .brand > span { display: none; }
+  .metrics { justify-content: flex-end; }
+  .metrics > span { padding: 0.15rem 0.28rem; font-size: 0.4rem; }
+  .metrics > span b { font-size: 0.56rem; }
+  .header button { min-height: 1.85rem; padding: 0.2rem 0.42rem; font-size: 0.5rem; }
+  .tableFrame { padding: 0.18rem; }
+  .table { grid-template-columns: 7.7rem minmax(16rem, 1fr) 7.7rem; grid-template-rows: 3.15rem minmax(3.2rem, 1fr) 13rem; gap: 0.15rem; padding: 0.28rem; border-radius: 1.2rem; }
+  .top { width: 14rem; }
+  .bot { padding: 0.18rem 0.25rem; border-radius: 0.45rem; }
+  .botTurn { bottom: calc(100% + 0.08rem); }
+  .left .botTurn { right: calc(100% + 0.08rem); }
+  .right .botTurn { left: calc(100% + 0.08rem); }
+  .botIdentity > span { display: none; }
+  .botIdentity { grid-template-columns: 1fr auto; gap: 0.2rem; }
+  .botIdentity strong { font-size: 0.52rem; }
+  .botIdentity small { font-size: 0.36rem; }
+  .botIdentity b { font-size: 0.42rem; }
+  .cardBacks { height: 1.2rem; margin-top: 0.1rem; }
+  .cardBacks i { width: 1rem; height: 1.3rem; border-radius: 0.12rem; }
+  .cardBacks i span { display: none; }
+  .bot em { display: none; }
+  .bottom { grid-template-columns: 12rem minmax(18rem, 1fr); gap: 0.2rem; }
+  .coach { height: 3.9rem; grid-template-columns: 1fr 1fr; gap: 0.25rem; padding: 0.25rem 0.35rem; overflow: hidden; border-radius: 0.45rem; }
+  .coach strong { font-size: 0.67rem; }
+  .coach p { max-width: 100%; overflow: hidden; font-size: 0.44rem; text-overflow: ellipsis; white-space: nowrap; }
+  .suggestion, .tip { padding-left: 0.25rem; border-top: 0; border-left: 1px solid rgb(229 188 107 / 14%); }
+  .suggestion p { display: none; }
+  .suggestion button { margin-top: 0.12rem; padding: 0.16rem 0.38rem; }
+  .event { display: none; }
+  .openingFrame { padding: 0.18rem; overflow: hidden; }
+  .openingTable {
+    grid-template-areas:
+      "coach seats"
+      "center seats"
+      "count count"
+      "actions lesson";
+    grid-template-columns: minmax(12rem, 0.75fr) minmax(24rem, 1.7fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 0.22rem 0.45rem;
+    align-content: stretch;
+    padding: 0.32rem 0.5rem;
+    border-radius: 1rem;
+  }
+  .openingCoach { grid-area: coach; align-self: center; text-align: left; }
+  .openingCoach > span { font-size: 0.39rem; }
+  .openingCoach h1 { margin-top: 0.08rem; font-size: 1rem; }
+  .openingCoach p { margin-top: 0.1rem; font-size: 0.45rem; line-height: 1.25; }
+  .openingSeats { grid-area: seats; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.2rem; align-self: center; }
+  .openingSeat { gap: 0.12rem; padding: 0.28rem 0.16rem; border-radius: 0.4rem; }
+  .openingSeatHeading span { font-size: 0.31rem; }
+  .openingSeatHeading strong { font-size: 0.54rem; }
+  .dicePair { gap: 0.12rem; }
+  .die { width: 1.3rem; height: 1.3rem; }
+  .diceTotal { font-size: 0.36rem; }
+  .openingSeat em { top: 0.12rem; right: 0.14rem; font-size: 0.29rem; }
+  .openingSeat em + em { bottom: 0.08rem; }
+  .openingCenter { grid-area: center; min-height: 0; gap: 0.45rem; }
+  .pendingDeck { width: 3rem; height: 4.15rem; }
+  .pendingDeck i { inset: 0.15rem 0.35rem 0.82rem; border-width: 1px; border-radius: 0.3rem; }
+  .pendingDeck span { font-size: 0.34rem; }
+  .flippedCard { gap: 0.05rem; }
+  .flippedCard strong { font-size: 0.48rem; }
+  .flippedCard span { font-size: 0.34rem; }
+  .clockwiseCount, .jokerRuleBanner { grid-area: count; }
+  .clockwiseCount { justify-content: flex-start; gap: 0.12rem; padding: 0.04rem; }
+  .clockwiseCount span { min-width: 2.25rem; padding: 0.1rem 0.18rem; font-size: 0.31rem; }
+  .clockwiseCount b { font-size: 0.43rem; }
+  .jokerRuleBanner { font-size: 0.42rem; }
+  .openingActions { grid-area: actions; min-height: 1.7rem; place-items: center start; }
+  .openingActions button { min-width: 9.5rem; min-height: 1.65rem; padding: 0.2rem 0.45rem; border-radius: 0.35rem; font-size: 0.46rem; }
+  .dealingPulse, .resultPause { font-size: 0.42rem; }
+  .openingLesson { grid-area: lesson; align-self: center; justify-items: end; text-align: right; }
+  .openingLesson strong { font-size: 0.52rem; }
+  .openingLesson span { max-width: 25rem; font-size: 0.38rem; line-height: 1.2; }
+  .openingLesson small { font-size: 0.33rem; }
+  .exchange { padding: 0.5rem 1rem; gap: 0.35rem; }
+  .exchange h2 { font-size: 1.2rem; }
+  .exchange p { font-size: 0.62rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealingPulse { animation: none; }
+}

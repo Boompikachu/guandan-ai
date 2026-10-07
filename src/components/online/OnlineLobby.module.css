@@ -1,11 +1,15 @@
 .page {
   position: relative;
-  min-height: 100svh;
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   color: var(--ivory);
   background:
-    radial-gradient(circle at 50% 42%, rgb(24 95 74 / 24%), transparent 30rem),
-    linear-gradient(140deg, #03080b, #081216 52%, #030709);
+    radial-gradient(circle at 50% 42%, rgb(140 91 37 / 17%), transparent 30rem),
+    linear-gradient(140deg, #05070a, #12171c 52%, #090604);
   isolation: isolate;
 }
 
@@ -60,7 +64,7 @@
   border: 1px solid rgb(229 188 107 / 58%);
   border-radius: 50%;
   color: var(--warm-gold);
-  background: radial-gradient(circle at 35% 25%, #1b302d, #07100f 70%);
+  background: radial-gradient(circle at 35% 25%, #3b2c1e, #090c0f 70%);
   box-shadow: inset 0 0 1.2rem rgb(229 188 107 / 7%), 0 0.6rem 1.4rem rgb(0 0 0 / 36%);
 }
 
@@ -92,6 +96,24 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.rulesButton,
+.leaveButton {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgb(229 188 107 / 28%);
+  border-radius: 0.6rem;
+  color: #d8c28e;
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.68rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.leaveButton {
+  color: #efb6ac;
+  border-color: rgb(191 70 59 / 45%);
 }
 
 .roomCode {
@@ -139,11 +161,12 @@
 .main {
   display: grid;
   width: min(100% - 2rem, 80rem);
-  min-height: calc(100svh - 4.8rem);
-  grid-template-rows: auto 1fr auto;
-  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(0.55rem, 1.3vh, 0.9rem);
   margin: 0 auto;
-  padding: clamp(1.2rem, 3vw, 2.5rem) 0;
+  padding: clamp(0.65rem, 1.6vh, 1.1rem) 0;
 }
 
 .intro {
@@ -173,7 +196,8 @@
 }
 
 .tableFrame {
-  min-height: 33rem;
+  height: 100%;
+  min-height: 0;
   padding: clamp(0.7rem, 1.5vw, 1.2rem);
   border: 1px solid #5f4426;
   border-radius: min(8vw, 5.5rem);
@@ -190,7 +214,8 @@
 .table {
   position: relative;
   display: grid;
-  min-height: 31rem;
+  height: 100%;
+  min-height: 0;
   grid-template-areas:
     ". top ."
     "left center right"
@@ -203,10 +228,10 @@
   border: 1px solid rgb(229 188 107 / 42%);
   border-radius: min(7vw, 4.6rem);
   background:
-    radial-gradient(ellipse at center, rgb(14 105 81 / 82%), transparent 58%),
+    radial-gradient(ellipse at center, rgb(109 72 35 / 36%), transparent 58%),
     repeating-linear-gradient(28deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 4px),
-    linear-gradient(145deg, #075545, #002e27 66%, #001e1a);
-  box-shadow: inset 0 0 5rem rgb(0 13 10 / 72%);
+    linear-gradient(145deg, #192027, #0a0e12 66%, #120a06);
+  box-shadow: inset 0 0 5rem rgb(0 0 0 / 76%);
 }
 
 .table::before,
@@ -238,18 +263,19 @@
   z-index: 1;
   display: flex;
   width: min(100%, 17rem);
+  min-width: 0;
   align-items: center;
   gap: 0.75rem;
   padding: 0.65rem;
   border: 1px solid transparent;
   border-radius: 1rem;
-  background: rgb(0 20 17 / 38%);
+  background: rgb(6 9 12 / 58%);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .seatSelf {
   border-color: rgb(229 188 107 / 30%);
-  background: rgb(1 18 16 / 62%);
+  background: rgb(12 15 18 / 78%);
 }
 
 .seatReady {
@@ -303,6 +329,12 @@
   color: #99aaa6;
   font-size: 0.68rem;
   font-weight: 700;
+}
+
+.identity > .competitiveLine {
+  color: #c9ad6d;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
 }
 
 .badges {
@@ -379,7 +411,7 @@
   padding: 0.9rem 1rem;
   border: 1px solid rgb(229 188 107 / 22%);
   border-radius: 1rem;
-  background: rgb(5 13 16 / 76%);
+  background: rgb(8 11 14 / 84%);
   box-shadow: 0 1rem 3rem rgb(0 0 0 / 24%);
   backdrop-filter: blur(14px);
 }
@@ -441,6 +473,9 @@
 
 @media (max-width: 760px) {
   .page {
+    display: block;
+    height: auto;
+    min-height: 100dvh;
     overflow-y: auto;
   }
 
@@ -470,7 +505,8 @@
 
   .main {
     width: min(100% - 1rem, 40rem);
-    min-height: calc(100svh - 6.8rem);
+    height: auto;
+    min-height: calc(100dvh - 6.8rem);
     padding-block: 1rem;
   }
 
@@ -479,17 +515,19 @@
   }
 
   .tableFrame {
+    height: auto;
     min-height: 30rem;
     border-radius: 2rem;
   }
 
   .table {
+    height: auto;
     min-height: 28rem;
     grid-template-areas:
       "top right"
       "center center"
       "bottom left";
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: 1fr 1.2fr 1fr;
     padding: 0.6rem;
     border-radius: 1.55rem;
@@ -499,7 +537,7 @@
     width: 100%;
     gap: 0.45rem;
     padding: 0.4rem;
-    background: rgb(0 20 17 / 62%);
+    background: rgb(6 9 12 / 78%);
   }
 
   .avatar {
@@ -516,7 +554,11 @@
   }
 
   .identity > span {
+    display: block;
+    overflow: hidden;
     font-size: 0.57rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .badge {
