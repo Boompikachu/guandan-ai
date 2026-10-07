@@ -408,15 +408,68 @@
 }
 
 @media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
-  .tableFrame { padding: 0.15rem; }
-  .tableSurface { grid-template-areas: ". top ." "left center right" "bottom bottom bottom"; grid-template-columns: 7.7rem minmax(15rem, 1fr) 7.7rem; grid-template-rows: 3rem minmax(4rem, 1fr) 8.6rem; gap: 0.12rem; padding: 0.25rem; border-radius: 1.15rem; }
-  .tableSurface::before { inset: 0.28rem; }
+  .matchApp {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100svh;
+    height: 100dvh;
+    min-width: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    contain: layout paint;
+    overflow: hidden;
+  }
+
+  .roundStage,
+  .tableFrame {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .tableFrame {
+    padding-top: 0.12rem;
+    padding-right: max(0.12rem, env(safe-area-inset-right));
+    padding-bottom: max(0.12rem, env(safe-area-inset-bottom));
+    padding-left: max(0.12rem, env(safe-area-inset-left));
+  }
+
+  .tableSurface {
+    max-width: 100%;
+    grid-template-areas: ". top ." "left center right" "bottom bottom bottom";
+    grid-template-columns: clamp(5.7rem, 15vw, 7rem) minmax(0, 1fr) clamp(5.7rem, 15vw, 7rem);
+    grid-template-rows: 1.9rem minmax(4.5rem, 1fr) clamp(8.8rem, 48dvh, 9.5rem);
+    gap: 0.1rem;
+    padding: 0.2rem;
+    overflow: hidden;
+    border-radius: 0.9rem;
+  }
+
+  .tableSurface::before { inset: 0.22rem; }
   .tableSurface::after, .cloudMotif, .eventToast { display: none; }
-  .positionTop { width: 14rem; }
-  .playerPosition :global(.player-zone) { padding: 0.1rem 0.18rem 0.05rem; border-radius: 0.45rem; }
-  .playerPosition :global(.hand-scroll) { min-height: 2.4rem; padding: 0.05rem 1.9rem 0.02rem 0.02rem; }
+
+  .playerPosition,
+  .centerStage,
+  .bottomDock {
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .positionTop { width: min(100%, 13rem); }
+  .playerPosition :global(.player-zone) { padding: 0.1rem 0.18rem; border-radius: 0.4rem; }
+  .playerPosition :global(.hand-scroll) { display: none; }
   .centerStage { width: min(100%, 22rem); }
-  .bottomDock { gap: 0.12rem; }
+  .bottomDock {
+    display: grid;
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.08rem;
+    overflow: hidden;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

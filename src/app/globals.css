@@ -52,6 +52,16 @@ body {
   overflow-x: hidden;
 }
 
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  html:has([data-gameplay-shell]),
+  body:has([data-gameplay-shell]) {
+    width: 100%;
+    height: 100%;
+    overscroll-behavior: none;
+    overflow: hidden;
+  }
+}
+
 button,
 input {
   font: inherit;

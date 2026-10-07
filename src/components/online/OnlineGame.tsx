@@ -344,7 +344,7 @@ export function OnlineGame({
 
   if (view.matchPhase === "PRE_ROUND_EXCHANGE") {
     return (
-      <div className={styles.gameShell}>
+      <div className={styles.gameShell} data-gameplay-shell="">
         <OnlineHeader view={view} status={connectionStatus} onOpenRules={onOpenRules} onLeave={() => setLeaveOpen(true)} />
         <ExchangePanel
           view={view}
@@ -392,7 +392,7 @@ export function OnlineGame({
   }
 
   return (
-    <div className={styles.gameShell}>
+    <div className={styles.gameShell} data-gameplay-shell="">
       <OnlineHeader view={view} status={connectionStatus} onOpenRules={onOpenRules} onLeave={() => setLeaveOpen(true)} />
       <main className={styles.tableFrame}>
         <div className={styles.tableSurface}>

@@ -106,7 +106,7 @@ export function OnlineOpening({
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-gameplay-shell="">
       <header className={styles.header}>
         <div className={styles.brand}><span aria-hidden="true">掼</span><strong>Guandan Go</strong></div>
         <div className={styles.room}><small>Room</small><strong>{view.roomCode}</strong></div>

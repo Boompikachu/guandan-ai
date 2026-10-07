@@ -193,12 +193,63 @@
 }
 
 @media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
-  .bar { min-height: 2.6rem; grid-template-columns: auto 1fr auto; gap: 0.35rem; padding: 0.2rem 0.45rem; }
-  .mark, .brand div > span { display: none; }
-  .brand h1 { font-size: 0.9rem; }
-  .metrics { justify-content: flex-end; }
-  .metrics > span { min-width: 2.8rem; min-height: 1.7rem; padding: 0.08rem 0.24rem; }
-  .metrics > span small { font-size: 0.34rem; }
-  .metrics > span strong { font-size: 0.52rem; }
-  .newGame, .rules, .leave { min-height: 1.8rem; padding: 0.18rem 0.38rem; font-size: 0.48rem; }
+  .bar {
+    min-height: 2.15rem;
+    grid-template-columns: 1.78rem minmax(0, 1fr) auto;
+    gap: 0.28rem;
+    padding-top: max(0.16rem, env(safe-area-inset-top));
+    padding-right: max(0.34rem, env(safe-area-inset-right));
+    padding-bottom: 0.16rem;
+    padding-left: max(0.34rem, env(safe-area-inset-left));
+    overflow: hidden;
+  }
+
+  .brand { display: none; }
+
+  .metrics {
+    min-width: 0;
+    grid-column: 2;
+    justify-content: center;
+    gap: 0.3rem;
+    overflow: hidden;
+  }
+
+  .metrics > span {
+    display: flex;
+    min-width: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0;
+    border: 0;
+  }
+
+  .metrics > span small { display: none; }
+  .metrics > span strong { margin: 0; color: #e7cc8d; font-size: clamp(0.46rem, 1.45vw, 0.63rem); }
+  .metrics > span strong::before { content: "R"; }
+  .metrics > section { min-width: 0; flex: 0 1 auto; }
+
+  .actions { display: contents; }
+  .newGame { display: none; }
+
+  .rules,
+  .leave {
+    min-width: 0;
+    min-height: 1.72rem;
+    padding: 0.18rem 0.42rem;
+    border-radius: 0.42rem;
+    font-size: 0.5rem;
+  }
+
+  .leave {
+    width: 1.78rem;
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .leave::before { content: "←"; font-size: 0.78rem; }
+  .rules { grid-column: 3; grid-row: 1; }
 }

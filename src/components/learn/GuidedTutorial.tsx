@@ -678,7 +678,7 @@ export function GuidedTutorial() {
     : coachBody;
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-gameplay-shell="">
       <TutorialHeader roundNumber={state.roundNumber} currentLevelRank={state.matchState.currentLevelRank} teamLevels={state.matchState.teamLevels} activeLevelTeam={state.matchState.activeLevelTeam} onRules={() => setRulesOpen(true)} onLeave={() => setLeaveOpen(true)} />
       {roundState ? (
         <main className={styles.tableFrame}>
@@ -689,7 +689,11 @@ export function GuidedTutorial() {
             <div className={styles.trick}><TrickArea currentPlay={roundState.roundState.trick.currentPlay} winningSeat={roundState.roundState.trick.winningSeat} currentLevelRank={roundState.roundState.currentLevelRank} /></div>
             <div className={styles.bottom}>
               <section className={styles.coach} aria-live="polite">
-                <div><span>Guandan Coach</span><strong>{tutorialCoachTitle}</strong><p>{tutorialCoachBody}</p></div>
+                <div className={styles.coachDesktop}><span>Guandan Coach</span><strong>{tutorialCoachTitle}</strong><p>{tutorialCoachBody}</p></div>
+                <details className={styles.coachMobile}>
+                  <summary><span>Coach</span><strong>{tutorialCoachTitle}</strong><small>Why?</small></summary>
+                  <p>{tutorialCoachBody}</p>
+                </details>
                 {recommendation ? (
                   <div className={styles.suggestion}>
                     <span>Suggested move</span>

@@ -16,6 +16,9 @@ export function LevelStatus({
 }: LevelStatusProps) {
   return (
     <section className={`${styles.status} ${compact ? styles.compact : ""}`} aria-label="Guandan match levels">
+      <span className={styles.mobileSummary} aria-hidden="true">
+        LEVEL {currentLevelRank}/{activeLevelTeam} · A:{teamLevels.A} · B:{teamLevels.B}
+      </span>
       <div className={styles.current}>
         <small>Current Level</small>
         <strong>{currentLevelRank}</strong>

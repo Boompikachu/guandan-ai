@@ -417,7 +417,7 @@ export function GameApp() {
 
   return (
     <>
-      <div className={styles.matchApp}>
+      <div className={styles.matchApp} data-gameplay-shell="">
         <MatchStatus
           state={match}
           onNewGame={newGame}

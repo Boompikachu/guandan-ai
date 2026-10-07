@@ -6,6 +6,10 @@
   gap: 0.3rem;
 }
 
+.mobileSummary {
+  display: none;
+}
+
 .current,
 .team {
   display: grid;
@@ -72,11 +76,24 @@
 .compact .team { min-width: 4.5rem; }
 
 @media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
-  .status { gap: 0.12rem; }
-  .current, .team { min-width: auto; padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
-  .current { display: flex; min-width: 5.3rem; align-items: center; justify-content: center; gap: 0.18rem; }
-  .status small { font-size: 0.3rem; }
-  .status strong, .current strong { margin: 0; font-size: 0.46rem; }
-  .current span { margin: 0; font-size: 0.29rem; }
-  .team { display: flex; align-items: center; gap: 0.14rem; }
+  .status {
+    display: block;
+    min-width: 0;
+  }
+
+  .current,
+  .team {
+    display: none;
+  }
+
+  .mobileSummary {
+    display: block;
+    overflow: hidden;
+    color: #e7cc8d;
+    font-size: clamp(0.46rem, 1.45vw, 0.63rem);
+    font-weight: 900;
+    letter-spacing: 0.025em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
