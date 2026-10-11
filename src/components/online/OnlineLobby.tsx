@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { formatCompetitiveRank } from "../../competitive/rating";
+import { competitiveRankLabel } from "../../i18n";
 import type { Seat } from "../../game/types";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
 import type { ClientLobbyView } from "../../shared/multiplayer-protocol";
+import { requestGameplayLandscape } from "../../lib/gameplay-orientation";
 import { ConnectionBadge } from "./ConnectionBadge";
 import styles from "./OnlineLobby.module.css";
 import { UiIcon } from "./UiIcon";
+import { useI18n } from "../i18n/I18nProvider";
 
 type OnlineLobbyProps = {
   view: ClientLobbyView;
@@ -33,6 +35,7 @@ export function OnlineLobby({
   onOpenRules,
   onLeave,
 }: OnlineLobbyProps) {
+  const { language, t } = useI18n();
   const [copied, setCopied] = useState(false);
   const self = view.players[view.self.seat];
 
@@ -43,26 +46,31 @@ export function OnlineLobby({
     window.setTimeout(() => setCopied(false), 1600);
   }
 
+  async function startGame() {
+    void requestGameplayLandscape();
+    await onStart();
+  }
+
   return (
     <main className={styles.page}>
-      <header className={styles.topBar}>
+      <header className={styles.topBar} data-language-reserve="">
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">掼</span>
           <div>
             <h1>Guandan Go</h1>
-            <span>Table lobby</span>
+            <span>{t("lobby.title")}</span>
           </div>
         </div>
         <div className={styles.roomBar}>
-          <button type="button" className={styles.leaveButton} onClick={onLeave}>← Leave Table</button>
-          <button type="button" className={styles.rulesButton} onClick={onOpenRules}>Rules</button>
-          <div className={styles.roomCode} aria-label={`Room code ${view.roomCode}`}>
-            <span>Room</span>
+          <button type="button" className={styles.leaveButton} onClick={onLeave}>← {t("lobby.leave")}</button>
+          <button type="button" className={styles.rulesButton} onClick={onOpenRules}>{t("common.rules")}</button>
+          <div className={styles.roomCode} aria-label={t("lobby.roomCodeValue", { code: view.roomCode })}>
+            <span>{t("home.room")}</span>
             <strong>{view.roomCode}</strong>
           </div>
           <button type="button" className={styles.copyButton} onClick={copyCode}>
             <UiIcon name={copied ? "check" : "copy"} />
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("lobby.copied") : t("lobby.copy")}
           </button>
           <ConnectionBadge status={connectionStatus} />
         </div>
@@ -70,12 +78,12 @@ export function OnlineLobby({
 
       <div className={styles.main}>
         <section className={styles.intro}>
-          <span>The table is being prepared</span>
-          <h2>Gather your players</h2>
-          <p>Partners sit opposite each other. All four players must be ready to begin.</p>
+          <span>{t("lobby.preparing")}</span>
+          <h2>{t("lobby.gather")}</h2>
+          <p>{t("lobby.detail")}</p>
         </section>
 
-        <section className={styles.tableFrame} aria-label="Players around the table">
+        <section className={styles.tableFrame} aria-label={t("lobby.tableLabel")}>
           <div className={styles.table}>
             {view.players.map((player, seat) => {
               const position = visualPosition(seat as Seat, view.self.seat);
@@ -98,25 +106,25 @@ export function OnlineLobby({
                   <div className={styles.identity}>
                     {player ? (
                       <>
-                        <strong>{player.name}{isSelf ? " · You" : ""}</strong>
-                        <span>Team {player.team}{isSelf ? " · Your seat" : ""}</span>
+                        <strong>{player.name}{isSelf ? ` · ${t("common.you")}` : ""}</strong>
+                        <span>{t("common.team", { team: player.team })}{isSelf ? ` · ${t("lobby.yourSeat")}` : ""}</span>
                         <span className={styles.competitiveLine}>
-                          {formatCompetitiveRank(player.competitiveRank)} · {player.rating}
+                          {competitiveRankLabel(player.competitiveRank, language)} · {player.rating}
                         </span>
                         <div className={styles.badges}>
-                          {player.isHost ? <span className={`${styles.badge} ${styles.badgeGold}`}>Host</span> : null}
+                          {player.isHost ? <span className={`${styles.badge} ${styles.badgeGold}`}>{t("common.host")}</span> : null}
                           <span className={`${styles.badge} ${player.ready ? styles.badgeReady : ""}`}>
-                            {player.ready ? "Ready" : "Not ready"}
+                            {player.ready ? t("common.ready") : t("common.notReady")}
                           </span>
                           {!player.connected ? (
-                            <span className={`${styles.badge} ${styles.badgeDanger}`}>Disconnected</span>
+                            <span className={`${styles.badge} ${styles.badgeDanger}`}>{t("common.disconnected")}</span>
                           ) : null}
                         </div>
                       </>
                     ) : (
                       <>
-                        <strong>Waiting for player</strong>
-                        <span>Invite a friend with the room code</span>
+                        <strong>{t("lobby.waitingPlayer")}</strong>
+                        <span>{t("lobby.invite")}</span>
                       </>
                     )}
                   </div>
@@ -128,7 +136,7 @@ export function OnlineLobby({
               <div className={styles.centerMark}>
                 <div>
                   <span>掼蛋</span>
-                  <small>Partners · Strategy · Victory</small>
+                  <small>{t("lobby.motto")}</small>
                 </div>
               </div>
             </div>
@@ -139,8 +147,8 @@ export function OnlineLobby({
 
         <section className={styles.actions}>
           <div>
-            <strong>{self?.ready ? "You are ready." : "Take your seat when ready."}</strong>
-            <p>The host can begin once everyone is connected and ready.</p>
+            <strong>{self?.ready ? t("lobby.youReady") : t("lobby.takeSeat")}</strong>
+            <p>{t("lobby.hostDetail")}</p>
           </div>
           <div className={styles.actionButtons}>
             <button
@@ -149,16 +157,16 @@ export function OnlineLobby({
               disabled={connectionStatus !== "CONNECTED"}
               onClick={() => void onSetReady(!self?.ready)}
             >
-              {self?.ready ? "Not Ready" : "Ready"}
+              {self?.ready ? t("lobby.notReadyAction") : t("common.ready")}
             </button>
             {view.self.isHost ? (
               <button
                 type="button"
                 className={styles.primaryButton}
                 disabled={!view.canStart || connectionStatus !== "CONNECTED"}
-                onClick={() => void onStart()}
+                onClick={() => void startGame()}
               >
-                Start Game
+                {t("lobby.startGame")}
               </button>
             ) : null}
           </div>

@@ -14,6 +14,7 @@ import type {
   ClientOpeningView,
   SessionAck,
 } from "../shared/multiplayer-protocol";
+import { REAL_DEAL_DURATION_MS } from "../shared/deal-presentation";
 import { getOpeningStartingSeat } from "../shared/round-opening";
 import { InMemoryLeaderboardStore } from "./leaderboard-store";
 import {
@@ -116,6 +117,7 @@ function roomWithMatch(match: AwaitingNextRoundDeckMatchEngineState): RoomRecord
     opening: null,
     matchResultId: "match-result-fixture",
     ratingResults: {},
+    dealStartedAt: null,
     turnDeadlineAt: null,
     turnSequence: 0,
     revision: 10,
@@ -411,6 +413,7 @@ describe("RoomManager authoritative opening ceremony", () => {
       revealedCard: expectedCard,
       startingSeat: getOpeningStartingSeat(0, expectedCard),
     });
+    expect(reveal.dealStartedAt).toEqual(expect.any(Number));
     expect(reveal.startingSeat).not.toBe(0);
 
     const resumed = manager.resumeRoom(code, sessions[2].reconnectToken, "socket-2-resumed");
@@ -419,11 +422,16 @@ describe("RoomManager authoritative opening ceremony", () => {
     expect(resumed.view.rollRounds).toEqual(reveal.rollRounds);
     expect(resumed.view.revealedCard).toEqual(expectedCard);
     expect(resumed.view.startingSeat).toBe(reveal.startingSeat);
+    expect(resumed.view.dealStartedAt).toBe(reveal.dealStartedAt);
 
     expect(manager.completeOpening(code).success).toBe(true);
     const gameViews = sessions.map((session) => gameView(manager, code, session.reconnectToken));
     expect(gameViews.every((view) => view.ownHand.length === 27)).toBe(true);
+    expect(gameViews.every((view) => view.players.every((player) => player?.cardCount === 27))).toBe(true);
+    expect(gameViews.every((view) => view.players.every((player) =>
+      player === null || (!("cards" in player) && !("hand" in player))))).toBe(true);
     expect(gameViews[0]?.currentTurn).toBe(reveal.startingSeat);
+    expect(gameViews.every((view) => view.dealStartedAt === null)).toBe(true);
     expect(
       gameViews.flatMap((view) => view.ownHand).filter((card) => card.id === expectedCard.id),
     ).toHaveLength(1);
@@ -840,7 +848,18 @@ describe("RoomManager server-authoritative turn timer", () => {
     );
     manager.advanceAutomaticMatchPhases(room.code);
     expect(manager.getRoom(room.code)?.match?.phase).toBe("PRE_ROUND_EXCHANGE");
+    expect(manager.getRoom(room.code)?.dealStartedAt).toBe(now);
     expect(manager.getRoom(room.code)?.turnDeadlineAt).toBeNull();
+    const duringDeal = gameView(manager, room.code, "session-3");
+    expect(duringDeal.matchPhase).toBe("PRE_ROUND_EXCHANGE");
+    expect(duringDeal.firstRoundRevealedCardId).toBeNull();
+    expect(duringDeal).not.toHaveProperty("rollRounds");
+    expect(manager.submitTribute("session-3", duringDeal.ownHand[0]!.id)).toMatchObject({
+      success: false,
+      error: { code: "INVALID_PHASE" },
+    });
+    now += REAL_DEAL_DURATION_MS;
+    expect(manager.getRoom(room.code)?.dealStartedAt).toBe(20_000);
     now += 120_000;
     expect(manager.expireDueTurns()).toEqual([]);
   });
@@ -922,13 +941,27 @@ describe("RoomManager automatic server phases", () => {
 
   it("automatically completes Anti-Tribute into the next active round", () => {
     const room = roomWithMatch(waitingMatch(doubleOutcome));
+    const now = 30_000;
     const manager = new RoomManager(
       createDeterministicRandomSource(),
       [[room.code, room]],
+      () => now,
     );
     manager.advanceAutomaticMatchPhases(room.code);
     expect(manager.getRoom(room.code)?.match?.phase).toBe("ROUND_IN_PROGRESS");
     expect(manager.getRoom(room.code)?.events[0]).toContain("Anti-Tribute");
+    expect(manager.getRoom(room.code)?.dealStartedAt).toBe(now);
+    expect(manager.getRoom(room.code)?.turnDeadlineAt)
+      .toBe(now + REAL_DEAL_DURATION_MS + 60_000);
+
+    const duringDeal = gameView(manager, room.code, "session-0");
+    const actor = duringDeal.currentTurn;
+    if (actor === null) throw new Error("Expected an Anti-Tribute leader.");
+    const actorView = gameView(manager, room.code, `session-${actor}`);
+    expect(manager.play(`session-${actor}`, [actorView.ownHand[0]!.id])).toMatchObject({
+      success: false,
+      error: { code: "INVALID_PHASE" },
+    });
   });
 
   it("derives Tribute and Return actors from sessions and resolves equal Tribute server-side", () => {
@@ -944,11 +977,13 @@ describe("RoomManager automatic server phases", () => {
       canonicalDeck.findIndex((candidate) => candidate.id === arrangedCard.id),
     );
     const room = roomWithMatch(waitingMatch(doubleOutcome));
+    let now = 50_000;
     const manager = new RoomManager(
       createDeterministicRandomSource({
         shuffle: (values) => arrangedIndexes.map((index) => values[index]!),
       }),
       [[room.code, room]],
+      () => now,
     );
     manager.advanceAutomaticMatchPhases(room.code);
 
@@ -956,6 +991,7 @@ describe("RoomManager automatic server phases", () => {
     const payerThree = gameView(manager, room.code, "session-3");
     expect(payerOne.exchange?.action).toBe("TRIBUTE");
     expect(payerThree.exchange?.action).toBe("TRIBUTE");
+    now += REAL_DEAL_DURATION_MS;
     expect(manager.submitTribute("session-0", payerOne.exchange!.legalCardIds[0]!))
       .toMatchObject({ success: false, error: { code: "INVALID_TRIBUTE" } });
 

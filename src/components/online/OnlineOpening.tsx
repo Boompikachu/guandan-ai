@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import type { Seat } from "../../game/types";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
-import { formatCompetitiveRank } from "../../competitive/rating";
+import { competitiveRankLabel, translate, type Language } from "../../i18n";
+import { playerLabel } from "../../lib/game-ui";
+import { requestGameplayLandscape } from "../../lib/gameplay-orientation";
 import {
   getClockwiseCounts,
   getOpeningCardValue,
@@ -15,9 +17,11 @@ import type {
 import { Card } from "../game/Card";
 import { ConfirmDialog } from "../game/ConfirmDialog";
 import { GameplayOrientationGate } from "../game/GameplayOrientationGate";
+import { RealDealAnimation } from "../game/RealDealAnimation";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { UiIcon } from "./UiIcon";
 import styles from "./OnlineOpening.module.css";
+import { useI18n } from "../i18n/I18nProvider";
 
 type OnlineOpeningProps = {
   view: ClientOpeningView;
@@ -39,8 +43,9 @@ const DOTS: Record<number, readonly number[]> = {
 };
 
 function Die({ value }: { value: number }) {
+  const { t } = useI18n();
   return (
-    <span className={styles.die} role="img" aria-label={`Die showing ${value}`}>
+    <span className={styles.die} role="img" aria-label={t("opening.die", { value })}>
       {Array.from({ length: 9 }, (_, index) => (
         <i key={index} className={DOTS[value]?.includes(index + 1) ? styles.dot : undefined} />
       ))}
@@ -49,18 +54,19 @@ function Die({ value }: { value: number }) {
 }
 
 function DiceResult({ roll }: { roll: ClientDiceRoll }) {
+  const { t } = useI18n();
   return (
     <span className={styles.diceResult}>
       <span><Die value={roll.die1} /><Die value={roll.die2} /></span>
-      <strong>Total {roll.total}</strong>
+      <strong>{t("opening.total", { total: roll.total })}</strong>
     </span>
   );
 }
 
-function nameFor(view: ClientOpeningView, seat: Seat | null): string {
-  if (seat === null) return "the winning player";
-  if (seat === view.self.seat) return "You";
-  return view.players[seat]?.name ?? `Player ${seat + 1}`;
+function nameFor(view: ClientOpeningView, seat: Seat | null, language: Language): string {
+  if (seat === null) return translate(language, "opening.winningPlayer");
+  if (seat === view.self.seat) return translate(language, "common.you");
+  return view.players[seat]?.name ?? playerLabel(seat, language);
 }
 
 export function OnlineOpening({
@@ -72,6 +78,7 @@ export function OnlineOpening({
   onOpenRules,
   onLeave,
 }: OnlineOpeningProps) {
+  const { language, t } = useI18n();
   const [leaveOpen, setLeaveOpen] = useState(false);
   const currentRound = view.rollRounds.at(-1);
   const previousRound = view.rollRounds.length > 1
@@ -85,34 +92,38 @@ export function OnlineOpening({
     [view.flipperSeat, view.revealedCard],
   );
 
-  let eyebrow = "Round 1 opening";
-  let title = "Who flips first?";
-  let detail = "Everyone rolls two dice. The unique highest total earns the right to flip the starting card.";
+  let eyebrow = t("opening.roundOne");
+  let title = t("opening.whoFlips");
+  let detail = t("opening.everyoneRolls");
   if (view.stage === "DICE_TIE_REROLL") {
-    eyebrow = "Tie for highest";
-    const names = currentRound?.eligibleSeats.map((seat) => nameFor(view, seat)).join(" and ");
-    title = `${names ?? "Tied players"} reroll`;
-    detail = "Only the players tied for the highest total remain in the dice contest.";
+    eyebrow = t("opening.tieHighest");
+    const names = currentRound?.eligibleSeats
+      .map((seat) => nameFor(view, seat, language))
+      .join(t("common.nameListSeparator"));
+    title = t("opening.rerollTitle", { names: names ?? t("opening.tiedPlayers") });
+    detail = t("opening.rerollDetail");
   } else if (view.stage === "WAITING_FOR_FLIP") {
-    eyebrow = `${nameFor(view, view.flipperSeat)} wins the roll`;
-    title = `${nameFor(view, view.flipperSeat)} flips the starting card`;
-    detail = "The deck is still undealt. One physical top card will determine who leads Round 1.";
+    eyebrow = t("opening.winsRoll", { name: nameFor(view, view.flipperSeat, language) });
+    title = t("opening.flips", { name: nameFor(view, view.flipperSeat, language) });
+    detail = t("opening.deckUndealt");
   } else if (view.stage === "SHOWING_START_RESULT") {
-    eyebrow = view.revealedCard?.kind === "JOKER" ? "Joker = yourself" : `Printed value ${value}`;
-    title = `${nameFor(view, view.startingSeat)} leads Round 1`;
+    eyebrow = view.revealedCard?.kind === "JOKER"
+      ? t("opening.jokerSelf")
+      : t("opening.printedValue", { value: value ?? "" });
+    title = t("opening.leads", { name: nameFor(view, view.startingSeat, language) });
     detail = view.revealedCard?.kind === "JOKER"
-      ? `${nameFor(view, view.flipperSeat)} flipped a Joker, so the Flipper leads.`
-      : `Count clockwise from ${nameFor(view, view.flipperSeat)} as 1. The cards are dealt only after this result.`;
+      ? t("opening.jokerLead", { name: nameFor(view, view.flipperSeat, language) })
+      : t("opening.countDetail", { name: nameFor(view, view.flipperSeat, language) });
   }
 
   return (
     <div className={styles.shell} data-gameplay-shell="">
-      <header className={styles.header}>
+      <header className={styles.header} data-language-reserve="">
         <div className={styles.brand}><span aria-hidden="true">掼</span><strong>Guandan Go</strong></div>
-        <div className={styles.room}><small>Room</small><strong>{view.roomCode}</strong></div>
-        <span className={styles.phase}>Opening Ceremony</span>
-        <button type="button" onClick={onOpenRules}>Rules</button>
-        <button type="button" className={styles.leave} onClick={() => setLeaveOpen(true)}>← Leave Table</button>
+        <div className={styles.room}><small>{t("home.room")}</small><strong>{view.roomCode}</strong></div>
+        <span className={styles.phase}>{t("opening.ceremony")}</span>
+        <button type="button" onClick={onOpenRules}>{t("common.rules")}</button>
+        <button type="button" className={styles.leave} onClick={() => setLeaveOpen(true)}>← {t("lobby.leave")}</button>
         <ConnectionBadge status={connectionStatus} />
       </header>
 
@@ -123,7 +134,7 @@ export function OnlineOpening({
           <p>{detail}</p>
         </section>
 
-        <section className={styles.table} aria-label="Opening ceremony table">
+        <section className={styles.table} aria-label={t("opening.ceremony")}>
           <div className={styles.players}>
             {view.players.map((player, seat) => {
               if (!player) return null;
@@ -139,10 +150,10 @@ export function OnlineOpening({
                 >
                   <span className={styles.avatar} aria-hidden="true"><UiIcon name="user" /></span>
                   <div>
-                    <strong>{player.name}{seat === view.self.seat ? " · You" : ""}</strong>
-                    <small>{formatCompetitiveRank(player.competitiveRank)} · {player.rating}</small>
+                    <strong>{player.name}{seat === view.self.seat ? ` · ${t("common.you")}` : ""}</strong>
+                    <small>{competitiveRankLabel(player.competitiveRank, language)} · {player.rating}</small>
                   </div>
-                  {roll ? <DiceResult roll={roll} /> : <em>{eligible ? "Ready to roll" : "Waiting"}</em>}
+                  {roll ? <DiceResult roll={roll} /> : <em>{eligible ? t("opening.readyRoll") : t("common.waiting")}</em>}
                 </article>
               );
             })}
@@ -154,36 +165,66 @@ export function OnlineOpening({
                 <Card card={view.revealedCard} currentLevelRank="2" compact disabled revealed />
               </div>
             ) : (
-              <div className={styles.deck} aria-label="Undealt face-down 108-card deck">
-                <i /><i /><strong>108</strong><span>UNDEALT CARDS</span>
+              <div className={styles.deck} aria-label={t("opening.undealtDeck")}>
+                <i /><i /><strong>108</strong><span>{t("opening.undealtCards")}</span>
               </div>
             )}
 
             {count.length > 0 ? (
-              <div className={styles.countTrack} aria-label="Clockwise opening count">
+              <div className={styles.countTrack} aria-label={t("opening.countAria")}>
                 {count.map((step) => (
                   <span key={step.count} className={step.count === count.length ? styles.finalCount : undefined}>
-                    <b>{step.count}</b>{nameFor(view, step.seat)}
+                    <b>{step.count}</b>{nameFor(view, step.seat, language)}
                   </span>
                 ))}
               </div>
             ) : view.revealedCard?.kind === "JOKER" ? (
-              <div className={styles.jokerRule}><strong>JOKER</strong><span>= YOURSELF</span></div>
+              <div className={styles.jokerRule}><strong>JOKER</strong><span>= {t("common.you")}</span></div>
             ) : null}
           </div>
+
+          {view.stage === "SHOWING_START_RESULT" && view.dealStartedAt !== null ? (
+            <RealDealAnimation
+              mode="embedded"
+              dealKey={`${view.roomCode}-${view.dealStartedAt}`}
+              startedAt={view.dealStartedAt}
+              startingSeat={view.startingSeat}
+              revealedCard={view.revealedCard}
+            />
+          ) : null}
         </section>
 
         <section className={styles.actionBar}>
           {view.canRoll ? (
-            <button type="button" disabled={connectionStatus !== "CONNECTED"} onClick={() => void onRoll()}>
-              Roll Two Dice
+            <button
+              type="button"
+              disabled={connectionStatus !== "CONNECTED"}
+              onClick={() => {
+                void requestGameplayLandscape();
+                void onRoll();
+              }}
+            >
+              {t("opening.roll")}
             </button>
           ) : view.canFlip ? (
-            <button type="button" disabled={connectionStatus !== "CONNECTED"} onClick={() => void onFlip()}>
-              Flip Card
+            <button
+              type="button"
+              disabled={connectionStatus !== "CONNECTED"}
+              onClick={() => {
+                void requestGameplayLandscape();
+                void onFlip();
+              }}
+            >
+              {t("opening.flip")}
             </button>
           ) : (
-            <p>{view.stage === "SHOWING_START_RESULT" ? "Now dealing 27 cards to each player…" : `Waiting for ${view.requiredRollers.map((seat) => nameFor(view, seat)).join(" and ") || nameFor(view, view.flipperSeat)}…`}</p>
+            <p>{view.stage === "SHOWING_START_RESULT"
+              ? t("opening.dealing")
+              : t("opening.waitingFor", {
+                  names: view.requiredRollers
+                    .map((seat) => nameFor(view, seat, language))
+                    .join(t("common.nameListSeparator")) || nameFor(view, view.flipperSeat, language),
+                })}</p>
           )}
           {errorMessage ? <span role="alert">{errorMessage}</span> : null}
         </section>
@@ -192,9 +233,9 @@ export function OnlineOpening({
       <GameplayOrientationGate />
       <ConfirmDialog
         open={leaveOpen}
-        title="Leave this match?"
-        message="Leaving during the opening ceremony will cancel the match for this room. Rating will not change."
-        confirmLabel="Leave Match"
+        title={t("game.leaveMatchTitle")}
+        message={t("opening.leaveMessage")}
+        confirmLabel={t("game.leaveMatch")}
         onCancel={() => setLeaveOpen(false)}
         onConfirm={onLeave}
       />

@@ -1,17 +1,14 @@
-import type { Card, Rank, Suit } from "../game/types";
+import type { Card, LevelRank, OrdinaryRank, Suit } from "../game/types";
 
 export type HandSortMode = "RANK" | "SUIT";
 
-const RANK_ORDER: readonly Rank[] = [
+const ORDINARY_STRENGTH_ORDER: readonly OrdinaryRank[] = [
   "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
-  "SMALL_JOKER", "BIG_JOKER",
 ];
 
 const SUIT_ORDER: readonly Suit[] = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
 
-function compareByRank(left: Card, right: Card): number {
-  const rank = RANK_ORDER.indexOf(left.rank) - RANK_ORDER.indexOf(right.rank);
-  if (rank !== 0) return rank;
+function comparePhysicalCards(left: Card, right: Card): number {
   if (left.kind === "SUITED" && right.kind === "SUITED") {
     const suit = SUIT_ORDER.indexOf(left.suit) - SUIT_ORDER.indexOf(right.suit);
     if (suit !== 0) return suit;
@@ -19,32 +16,76 @@ function compareByRank(left: Card, right: Card): number {
   return left.deckIndex - right.deckIndex || left.id.localeCompare(right.id);
 }
 
-function compareBySuit(left: Card, right: Card): number {
-  const leftSuit = left.kind === "SUITED" ? SUIT_ORDER.indexOf(left.suit) : SUIT_ORDER.length;
-  const rightSuit = right.kind === "SUITED" ? SUIT_ORDER.indexOf(right.suit) : SUIT_ORDER.length;
+function specialStrength(card: Card, currentLevelRank: LevelRank): number | null {
+  if (card.rank === currentLevelRank) return 0;
+  if (card.rank === "SMALL_JOKER") return 1;
+  if (card.rank === "BIG_JOKER") return 2;
+  return null;
+}
+
+function compareSpecialGroup(
+  left: Card,
+  right: Card,
+  currentLevelRank: LevelRank,
+): number | null {
+  const leftSpecial = specialStrength(left, currentLevelRank);
+  const rightSpecial = specialStrength(right, currentLevelRank);
+  if (leftSpecial === null && rightSpecial === null) return null;
+  if (leftSpecial === null) return -1;
+  if (rightSpecial === null) return 1;
+  return leftSpecial - rightSpecial || comparePhysicalCards(left, right);
+}
+
+function compareByRank(
+  left: Card,
+  right: Card,
+  currentLevelRank: LevelRank,
+): number {
+  const special = compareSpecialGroup(left, right, currentLevelRank);
+  if (special !== null) return special;
+  const rank = ORDINARY_STRENGTH_ORDER.indexOf(left.rank as OrdinaryRank) -
+    ORDINARY_STRENGTH_ORDER.indexOf(right.rank as OrdinaryRank);
+  if (rank !== 0) return rank;
+  return comparePhysicalCards(left, right);
+}
+
+function compareBySuit(
+  left: Card,
+  right: Card,
+  currentLevelRank: LevelRank,
+): number {
+  const special = compareSpecialGroup(left, right, currentLevelRank);
+  if (special !== null) return special;
+  const leftSuit = SUIT_ORDER.indexOf((left as Extract<Card, { kind: "SUITED" }>).suit);
+  const rightSuit = SUIT_ORDER.indexOf((right as Extract<Card, { kind: "SUITED" }>).suit);
   const suit = leftSuit - rightSuit;
-  return suit || compareByRank(left, right);
+  return suit || compareByRank(left, right, currentLevelRank);
 }
 
 export function sortHandCardIds(
   cards: readonly Card[],
-  mode: HandSortMode = "RANK",
+  mode: HandSortMode,
+  currentLevelRank: LevelRank,
 ): string[] {
   const compare = mode === "SUIT" ? compareBySuit : compareByRank;
-  return [...cards].sort(compare).map((card) => card.id);
+  return [...cards]
+    .sort((left, right) => compare(left, right, currentLevelRank))
+    .map((card) => card.id);
 }
 
 export function reconcileHandDisplayOrder(
   currentOrder: readonly string[],
   cards: readonly Card[],
+  mode: HandSortMode,
+  currentLevelRank: LevelRank,
 ): string[] {
   const cardsById = new Map(cards.map((card) => [card.id, card] as const));
   const retained = currentOrder.filter((id) => cardsById.has(id));
   const retainedIds = new Set(retained);
   const added = cards.filter((card) => !retainedIds.has(card.id));
 
-  if (retained.length === 0) return sortHandCardIds(cards);
-  return [...retained, ...sortHandCardIds(added)];
+  if (retained.length === 0) return sortHandCardIds(cards, mode, currentLevelRank);
+  return [...retained, ...sortHandCardIds(added, mode, currentLevelRank)];
 }
 
 export function moveHandCard(

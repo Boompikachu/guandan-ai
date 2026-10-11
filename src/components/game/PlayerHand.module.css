@@ -3,7 +3,7 @@
   padding: 0.65rem 0.8rem 0.45rem;
   border: 1px solid rgb(229 188 107 / 20%);
   border-radius: 1.3rem;
-  background: linear-gradient(180deg, rgb(15 19 23 / 88%), rgb(5 7 9 / 94%));
+  background: linear-gradient(180deg, rgb(10 14 16 / 96%), rgb(2 4 6 / 98%));
   box-shadow: inset 0 1px rgb(255 255 255 / 3%), 0 1rem 2.5rem rgb(0 0 0 / 30%);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -21,7 +21,7 @@
   padding: 0.35rem 0.55rem 0.25rem;
   border-color: rgb(229 188 107 / 30%);
   border-radius: 1rem;
-  background: linear-gradient(180deg, rgb(16 20 24 / 78%), rgb(5 7 10 / 88%));
+  background: linear-gradient(180deg, rgb(12 17 19 / 96%), rgb(2 5 7 / 99%));
   box-shadow: inset 0 1px rgb(255 255 255 / 3%), 0 0.65rem 1.8rem rgb(0 0 0 / 24%);
 }
 
@@ -56,6 +56,7 @@
 }
 
 .handTools button:hover,
+.handTools button[aria-pressed="true"],
 .handTools .arrangeActive {
   color: #1a1208;
   border-color: #e7c77e;
@@ -105,8 +106,14 @@
 .cardSlot {
   position: absolute;
   bottom: 0;
-  width: max-content;
+  width: 4.55rem;
+  height: 6.45rem;
   isolation: isolate;
+}
+
+.compactCardSlot {
+  width: 3.45rem;
+  height: 4.9rem;
 }
 
 .arranging {
@@ -160,6 +167,8 @@
 
   .fan { height: 5.3rem; }
   .compact .fan { height: 4.05rem; }
+  .cardSlot { width: 3.9rem; height: 5.55rem; }
+  .compactCardSlot { width: 2.85rem; height: 4.05rem; }
   .handTools span { display: none; }
 }
 
@@ -195,7 +204,7 @@
     max-width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 0.9rem 0.22rem 0.08rem;
+    padding: 1.35rem 0.22rem 0.08rem;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-padding-inline: 0.22rem;
@@ -203,9 +212,12 @@
   }
 
   .fan {
-    height: 4.45rem;
-    margin-inline: 0;
+    height: 5.2rem;
+    margin-inline: auto;
   }
+
+  .cardSlot { width: 3.7rem; height: 5.2rem; }
+  .compactCardSlot { width: 1.9rem; height: 2.7rem; }
 
   .handTools {
     position: absolute;
@@ -218,7 +230,8 @@
     transform: translateX(-50%);
   }
 
-  .handTools button { min-height: 0.96rem; padding: 0.08rem 0.26rem; font-size: 0.36rem; border-radius: 0.24rem; }
+  .handTools button { min-width: 2.75rem; min-height: 1.15rem; padding: 0.1rem 0.3rem; font-size: 0.42rem; border-radius: 0.28rem; }
+  .handTools button > span { display: none; }
   .handTools span { display: none; }
   .compact .scroll { min-height: 0; padding: 0.08rem 0.15rem 0.03rem; }
   .compact .fan { height: 2.7rem; }

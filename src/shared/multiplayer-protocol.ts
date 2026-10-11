@@ -1,6 +1,7 @@
 import type { CombinationInterpretation } from "../game/interpretations";
 import type { Card, LevelRank, Seat, TeamId } from "../game/types";
 import type { CompetitiveRank } from "../competitive/rating";
+import type { GameplayImpactEvent } from "./gameplay-impact";
 
 export type RoomCode = string;
 export type RoomVisibility = "PUBLIC" | "PRIVATE";
@@ -44,6 +45,7 @@ export type ClientRoomBase = {
     ClientPlayerView | null,
   ];
   events: string[];
+  impactEvents?: GameplayImpactEvent[];
 };
 
 export type ClientLobbyView = ClientRoomBase & {
@@ -76,6 +78,7 @@ export type ClientOpeningView = ClientRoomBase & {
   flipperSeat: Seat | null;
   revealedCard: Card | null;
   startingSeat: Seat | null;
+  dealStartedAt: number | null;
   canRoll: boolean;
   canFlip: boolean;
 };
@@ -97,6 +100,7 @@ export type ClientGameView = ClientRoomBase & {
   teamLevels: Record<TeamId, LevelRank>;
   currentTurn: Seat | null;
   turnDeadlineAt: number | null;
+  dealStartedAt: number | null;
   turnSequence: number;
   currentPlay: CombinationInterpretation | null;
   winningSeat: Seat | null;

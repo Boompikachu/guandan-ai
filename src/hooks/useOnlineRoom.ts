@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { getOrCreateAnonymousPlayerId } from "../lib/competitive-identity";
+import { commandErrorMessage, type ClientErrorCode } from "../i18n";
+import { useI18n } from "../components/i18n/I18nProvider";
 import type {
   ClientRoomView,
   ClientToServerEvents,
@@ -55,6 +57,7 @@ function saveSession(session: RoomSessionCredentials | null): void {
 }
 
 export function useOnlineRoom() {
+  const { language, t } = useI18n();
   const socketRef = useRef<OnlineSocket | null>(null);
   const sessionRef = useRef<RoomSessionCredentials | null>(null);
   const playerIdRef = useRef<string | null>(null);
@@ -62,8 +65,8 @@ export function useOnlineRoom() {
   const [publicRooms, setPublicRooms] = useState<PublicRoomSummary[]>([]);
   const [connectionStatus, setConnectionStatus] =
     useState<OnlineConnectionStatus>("RECONNECTING");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [cancelledMatchMessage, setCancelledMatchMessage] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<ClientErrorCode | null>(null);
+  const [cancelledMatch, setCancelledMatch] = useState(false);
 
   const acceptView = useCallback((nextView: ClientRoomView) => {
     setView((current) =>
@@ -74,14 +77,14 @@ export function useOnlineRoom() {
 
   const acceptSession = useCallback((result: SessionAck): boolean => {
     if (!result.success) {
-      setErrorMessage(result.error.message);
+      setErrorCode(result.error.code);
       return false;
     }
     sessionRef.current = result.session;
     saveSession(result.session);
     acceptView(result.view);
-    setErrorMessage(null);
-    setCancelledMatchMessage(null);
+    setErrorCode(null);
+    setCancelledMatch(false);
     return true;
   }, [acceptView]);
 
@@ -93,14 +96,14 @@ export function useOnlineRoom() {
 
     socket.on("room:view", acceptView);
     socket.on("rooms:public", setPublicRooms);
-    socket.on("room:error", (error) => setErrorMessage(error.message));
+    socket.on("room:error", (error) => setErrorCode(error.code));
     socket.on("room:closed", (notice) => {
       sessionRef.current = null;
       saveSession(null);
       setView(null);
-      setErrorMessage(null);
+      setErrorCode(null);
       if (notice.reason === "PLAYER_LEFT_MATCH") {
-        setCancelledMatchMessage(notice.message);
+        setCancelledMatch(true);
       } else {
         window.history.replaceState(null, "", "/");
       }
@@ -117,11 +120,7 @@ export function useOnlineRoom() {
         sessionRef.current = null;
         saveSession(null);
         setView(null);
-        setErrorMessage(
-          result.error.code === "ROOM_NOT_FOUND"
-            ? "That room no longer exists. The server may have restarted."
-            : result.error.message,
-        );
+        setErrorCode(result.error.code);
       });
     });
     socket.on("disconnect", (reason) => {
@@ -143,7 +142,7 @@ export function useOnlineRoom() {
   ): Promise<boolean> => {
     const socket = socketRef.current;
     if (!socket?.connected) {
-      setErrorMessage("The server is not connected yet.");
+      setErrorCode("SERVER_NOT_CONNECTED");
       return false;
     }
     return new Promise((resolve) => {
@@ -161,7 +160,7 @@ export function useOnlineRoom() {
     async (roomCode: string, displayName: string): Promise<boolean> => {
       const socket = socketRef.current;
       if (!socket?.connected) {
-        setErrorMessage("The server is not connected yet.");
+        setErrorCode("SERVER_NOT_CONNECTED");
         return false;
       }
       return new Promise((resolve) => {
@@ -182,17 +181,17 @@ export function useOnlineRoom() {
       new Promise((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
-          setErrorMessage("The server is disconnected. Your action was not sent.");
+          setErrorCode("SERVER_DISCONNECTED");
           resolve(false);
           return;
         }
         send((result) => {
           if (!result.success) {
-            setErrorMessage(result.error.message);
+            setErrorCode(result.error.code);
             resolve(false);
             return;
           }
-          setErrorMessage(null);
+          setErrorCode(null);
           resolve(true);
         });
       }),
@@ -262,20 +261,20 @@ export function useOnlineRoom() {
   const leaveRoom = useCallback(async (): Promise<boolean> => {
     const socket = socketRef.current;
     if (!socket?.connected) {
-      setErrorMessage("Reconnect before intentionally leaving this table.");
+      setErrorCode("RECONNECT_TO_LEAVE");
       return false;
     }
     return new Promise((resolve) => {
       socket.emit("room:leave", {}, (result: LeaveRoomAck) => {
         if (!result.success) {
-          setErrorMessage(result.error.message);
+          setErrorCode(result.error.code);
           resolve(false);
           return;
         }
         sessionRef.current = null;
         saveSession(null);
         setView(null);
-        setErrorMessage(null);
+        setErrorCode(null);
         window.history.replaceState(null, "", "/");
         resolve(true);
       });
@@ -286,11 +285,11 @@ export function useOnlineRoom() {
     view,
     publicRooms,
     connectionStatus,
-    errorMessage,
-    cancelledMatchMessage,
-    clearError: () => setErrorMessage(null),
+    errorMessage: errorCode ? commandErrorMessage(errorCode, language) : null,
+    cancelledMatchMessage: cancelledMatch ? t("match.cancelledPlayerLeft") : null,
+    clearError: () => setErrorCode(null),
     clearCancelledMatch: () => {
-      setCancelledMatchMessage(null);
+      setCancelledMatch(false);
       window.history.replaceState(null, "", "/");
     },
     createRoom,

@@ -155,6 +155,7 @@ export function buildClientRoomView(
     },
     players: buildPlayers(room),
     events: [...room.events],
+    impactEvents: [...(room.impactEvents ?? [])],
   };
 
   if (room.status === "LOBBY") {
@@ -200,6 +201,7 @@ export function buildClientRoomView(
         ? cloneCard(room.opening.revealedCard)
         : null,
       startingSeat: room.opening.startingSeat,
+      dealStartedAt: room.dealStartedAt,
       canRoll: requiredRollers.includes(player.seat),
       canFlip:
         room.opening.stage === "WAITING_FOR_FLIP" &&
@@ -263,10 +265,13 @@ export function buildClientRoomView(
     activeLevelTeam: match.matchState.activeLevelTeam,
     teamLevels: { ...match.matchState.teamLevels },
     turnDeadlineAt: match.phase === "ROUND_IN_PROGRESS" ? room.turnDeadlineAt : null,
+    dealStartedAt: room.dealStartedAt,
     turnSequence: room.turnSequence,
     ownHand: hands[player.seat].map(cloneCard),
     firstRoundRevealedCardId:
-      match.roundNumber === 1 ? match.firstRoundRevealedCardId : null,
+      match.roundNumber === 1 && match.phase === "ROUND_IN_PROGRESS"
+        ? match.firstRoundRevealedCardId
+        : null,
     exchange: buildExchangeView(room, player),
   };
 }

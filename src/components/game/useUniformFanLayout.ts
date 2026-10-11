@@ -1,31 +1,22 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  calculateHandFanLayout,
+  type HandFanLayout,
+} from "../../lib/hand-fan-layout";
 
 type FanLayoutOptions = {
   compact?: boolean;
   minExposure?: number;
 };
 
-type FanLayout = {
-  cardWidth: number;
-  step: number;
-  width: number;
-};
-
-function preferredStep(cardWidth: number, count: number): number {
-  if (count >= 23) return cardWidth * 0.62;
-  if (count >= 15) return cardWidth * 0.8;
-  if (count >= 9) return cardWidth * 0.94;
-  return cardWidth + 6;
-}
-
 export function useUniformFanLayout(
   count: number,
   { compact = false, minExposure = compact ? 10 : 34 }: FanLayoutOptions = {},
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<FanLayout | null>(null);
+  const [layout, setLayout] = useState<HandFanLayout | null>(null);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -35,7 +26,9 @@ export function useUniformFanLayout(
     }
     const element = container;
 
-    const media = window.matchMedia("(max-width: 960px) and (pointer: coarse)");
+    const media = window.matchMedia(
+      "(max-width: 1000px) and (max-height: 500px), (max-width: 960px) and (pointer: coarse)",
+    );
     let frame = 0;
 
     function measure() {
@@ -51,21 +44,20 @@ export function useUniformFanLayout(
             Number.parseFloat(computed.paddingRight),
         );
         const cardWidth = card.offsetWidth;
-        const fitStep = count <= 1 ? 0 : Math.max(0, (available - cardWidth) / (count - 1));
-        const desiredStep = preferredStep(cardWidth, count);
-        const step = count <= 1
-          ? 0
-          : media.matches && fitStep < minExposure
-            ? Math.min(desiredStep, minExposure)
-            : Math.min(desiredStep, fitStep);
-        const width = cardWidth + Math.max(0, count - 1) * step;
+        const next = calculateHandFanLayout({
+          availableWidth: available,
+          cardWidth,
+          count,
+          minExposure,
+          allowOverflow: media.matches,
+        });
         setLayout((current) =>
           current &&
           Math.abs(current.cardWidth - cardWidth) < 0.5 &&
-          Math.abs(current.step - step) < 0.5 &&
-          Math.abs(current.width - width) < 0.5
+          Math.abs(current.step - next.step) < 0.5 &&
+          Math.abs(current.width - next.width) < 0.5
             ? current
-            : { cardWidth, step, width });
+            : next);
       });
     }
 
@@ -85,10 +77,9 @@ export function useUniformFanLayout(
 
   const fanStyle = layout
     ? ({
-        "--fan-step": `${layout.step}px`,
         "--fan-width": `${layout.width}px`,
       } as CSSProperties)
     : undefined;
 
-  return { containerRef, fanStyle };
+  return { containerRef, fanStyle, fanStep: layout?.step ?? null };
 }

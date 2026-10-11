@@ -1,6 +1,9 @@
+"use client";
+
 import type { MatchEngineState } from "../../game/match-engine";
 import { LevelStatus } from "./LevelStatus";
 import styles from "./MatchStatus.module.css";
+import { useI18n } from "../i18n/I18nProvider";
 
 type MatchStatusProps = {
   state: MatchEngineState;
@@ -10,18 +13,19 @@ type MatchStatusProps = {
 };
 
 export function MatchStatus({ state, onNewGame, onOpenRules, onLeave }: MatchStatusProps) {
+  const { t } = useI18n();
   return (
-    <header className={styles.bar}>
+    <header className={styles.bar} data-language-reserve="">
       <div className={styles.brand}>
         <span className={styles.mark} aria-hidden="true">贯</span>
         <div>
           <h1>Guandan Go</h1>
-          <span>Local table</span>
+          <span>{t("game.localTable")}</span>
         </div>
       </div>
 
-      <div className={styles.metrics} aria-label="Match status">
-        <span><small>Round</small><strong>{state.roundNumber}</strong></span>
+      <div className={styles.metrics} aria-label={t("game.matchStatus")}>
+        <span><small>{t("common.roundLabel")}</small><strong>{state.roundNumber}</strong></span>
         <LevelStatus
           currentLevelRank={state.matchState.currentLevelRank}
           activeLevelTeam={state.matchState.activeLevelTeam}
@@ -31,9 +35,9 @@ export function MatchStatus({ state, onNewGame, onOpenRules, onLeave }: MatchSta
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={styles.leave} onClick={onLeave}>← Home</button>
-        <button type="button" className={styles.rules} onClick={onOpenRules}>Rules</button>
-        <button type="button" className={styles.newGame} onClick={onNewGame}>New Game</button>
+        <button type="button" className={styles.leave} onClick={onLeave}>← {t("common.home")}</button>
+        <button type="button" className={styles.rules} onClick={onOpenRules}>{t("common.rules")}</button>
+        <button type="button" className={styles.newGame} onClick={onNewGame}>{t("game.newGame")}</button>
       </div>
     </header>
   );

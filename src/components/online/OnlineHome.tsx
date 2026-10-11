@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { OnlineConnectionStatus } from "../../hooks/useOnlineRoom";
 import type { PublicRoomSummary, RoomVisibility } from "../../shared/multiplayer-protocol";
 import { ConnectionBadge } from "./ConnectionBadge";
 import styles from "./OnlineHome.module.css";
 import { UiIcon } from "./UiIcon";
+import { useI18n } from "../i18n/I18nProvider";
 
 type OnlineHomeProps = {
   initialRoomCode?: string;
@@ -30,6 +31,7 @@ export function OnlineHome({
   onJoin,
   onOpenRules,
 }: OnlineHomeProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<RoomMode>(initialRoomCode ? "join" : "create");
   const [createName, setCreateName] = useState("");
   const [joinName, setJoinName] = useState("");
@@ -39,6 +41,22 @@ export function OnlineHome({
   const [directoryMessage, setDirectoryMessage] = useState<string | null>(null);
   const joinNameRef = useRef<HTMLInputElement>(null);
   const accessPanelRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const onlineEntryRequested = new URLSearchParams(window.location.search).get("play") === "online" ||
+      window.location.hash === "#online-play";
+    if (!onlineEntryRequested) return;
+    const frame = window.requestAnimationFrame(() => {
+      setMode("create");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      accessPanelRef.current?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
+      accessPanelRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   async function submitCreate(event: FormEvent) {
     event.preventDefault();
@@ -58,7 +76,7 @@ export function OnlineHome({
     if (!joinName.trim()) {
       setMode("join");
       setRoomCode(code);
-      setDirectoryMessage("Enter your name to join this table.");
+      setDirectoryMessage(t("home.enterName"));
       accessPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       window.setTimeout(() => joinNameRef.current?.focus(), 0);
       return;
@@ -98,16 +116,19 @@ export function OnlineHome({
           </header>
 
           <div className={styles.intro}>
-            <span className={styles.eyebrow}>A classic partnership card game</span>
-            <p>
-              Create a six-character room, invite three friends, and play a
-              complete authoritative Guandan match from any screen.
-            </p>
-            <small>No accounts or installation required.</small>
+            <span className={styles.eyebrow}>{t("home.tagline")}</span>
+            <p>{t("home.intro")}</p>
+            <small>{t("home.noAccount")}</small>
           </div>
 
-          <section ref={accessPanelRef} className={styles.accessPanel} aria-label="Room access">
-            <div className={styles.tabs} role="tablist" aria-label="Room action">
+          <section
+            id="online-play"
+            ref={accessPanelRef}
+            className={styles.accessPanel}
+            aria-label={t("home.roomAccess")}
+            tabIndex={-1}
+          >
+            <div className={styles.tabs} role="tablist" aria-label={t("home.roomAction")}>
               <button
                 type="button"
                 role="tab"
@@ -118,7 +139,7 @@ export function OnlineHome({
                 onClick={() => setMode("create")}
               >
                 <UiIcon name="users" />
-                Create Room
+                {t("home.createRoom")}
               </button>
               <button
                 type="button"
@@ -130,7 +151,7 @@ export function OnlineHome({
                 onClick={() => setMode("join")}
               >
                 <UiIcon name="link" />
-                Join Room
+                {t("home.joinRoom")}
               </button>
             </div>
 
@@ -145,11 +166,11 @@ export function OnlineHome({
                 <div className={styles.formHeading}>
                   <span className={styles.formIcon}><UiIcon name="room" /></span>
                   <div>
-                    <h2>Create a Room</h2>
-                    <p>Open a table to everyone, or keep it private for invited friends.</p>
+                    <h2>{t("home.createTitle")}</h2>
+                    <p>{t("home.createDetail")}</p>
                   </div>
                 </div>
-                <label htmlFor="create-name">Display name</label>
+                <label htmlFor="create-name">{t("home.displayName")}</label>
                 <div className={styles.inputWrap}>
                   <UiIcon name="user" />
                   <input
@@ -159,19 +180,19 @@ export function OnlineHome({
                     autoComplete="nickname"
                     value={createName}
                     onChange={(event) => setCreateName(event.target.value)}
-                    placeholder="Your name"
+                    placeholder={t("home.yourName")}
                   />
                 </div>
                 <fieldset className={styles.visibility}>
-                  <legend>Room visibility</legend>
+                  <legend>{t("home.visibility")}</legend>
                   <button
                     type="button"
                     aria-pressed={visibility === "PUBLIC"}
                     className={visibility === "PUBLIC" ? styles.visibilityActive : undefined}
                     onClick={() => setVisibility("PUBLIC")}
                   >
-                    <strong>Public</strong>
-                    <span>Listed in Open Rooms</span>
+                    <strong>{t("home.public")}</strong>
+                    <span>{t("home.publicDetail")}</span>
                   </button>
                   <button
                     type="button"
@@ -179,13 +200,17 @@ export function OnlineHome({
                     className={visibility === "PRIVATE" ? styles.visibilityActive : undefined}
                     onClick={() => setVisibility("PRIVATE")}
                   >
-                    <strong>Private</strong>
-                    <span>Join by room code only</span>
+                    <strong>{t("home.private")}</strong>
+                    <span>{t("home.privateDetail")}</span>
                   </button>
                 </fieldset>
                 <button type="submit" className={styles.primaryAction} disabled={unavailable}>
                   <UiIcon name="users" />
-                  {pending ? "Creating…" : `Create ${visibility === "PUBLIC" ? "Public" : "Private"} Room`}
+                  {pending
+                    ? t("home.creating")
+                    : t("home.createVisibilityRoom", {
+                        visibility: t(visibility === "PUBLIC" ? "home.public" : "home.private"),
+                      })}
                   <UiIcon name="arrow" />
                 </button>
               </form>
@@ -200,13 +225,13 @@ export function OnlineHome({
                 <div className={styles.formHeading}>
                   <span className={styles.formIcon}><UiIcon name="enter" /></span>
                   <div>
-                    <h2>Join a Private Room</h2>
-                    <p>Enter the code from your host. Seats are assigned automatically.</p>
+                    <h2>{t("home.joinPrivate")}</h2>
+                    <p>{t("home.joinDetail")}</p>
                   </div>
                 </div>
                 <div className={styles.joinFields}>
                   <div>
-                    <label htmlFor="join-code">Room code</label>
+                    <label htmlFor="join-code">{t("home.roomCode")}</label>
                     <div className={styles.inputWrap}>
                       <span className={styles.hash} aria-hidden="true">#</span>
                       <input
@@ -222,7 +247,7 @@ export function OnlineHome({
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="join-name">Display name</label>
+                    <label htmlFor="join-name">{t("home.displayName")}</label>
                     <div className={styles.inputWrap}>
                       <UiIcon name="user" />
                       <input
@@ -233,14 +258,14 @@ export function OnlineHome({
                         autoComplete="nickname"
                         value={joinName}
                         onChange={(event) => setJoinName(event.target.value)}
-                        placeholder="Your name"
+                        placeholder={t("home.yourName")}
                       />
                     </div>
                   </div>
                 </div>
                 <button type="submit" className={styles.primaryAction} disabled={unavailable}>
                   <UiIcon name="enter" />
-                  {pending ? "Joining…" : "Join Room"}
+                  {pending ? t("home.joining") : t("home.joinRoom")}
                   <UiIcon name="arrow" />
                 </button>
               </form>
@@ -252,58 +277,58 @@ export function OnlineHome({
 
           <footer className={styles.footer}>
             <button type="button" onClick={onOpenRules}>
-              <UiIcon name="play" /> How to Play
+              <UiIcon name="play" /> {t("home.howToPlay")}
             </button>
             <Link href="/leaderboard" className={styles.leaderboardLink}>
               <UiIcon name="cards" />
-              <span><strong>Leaderboard</strong><small>Rating, tiers, and competitive standards.</small></span>
+              <span><strong>{t("home.leaderboard")}</strong><small>{t("home.leaderboardDetail")}</small></span>
               <UiIcon name="arrow" />
             </Link>
             <Link href="/learn" className={styles.learnLink}>
               <UiIcon name="monitor" />
-              <span><strong>Learn to Play</strong><small>One seat, three computer players, and a live coach.</small></span>
+              <span><strong>{t("home.learn")}</strong><small>{t("home.learnDetail")}</small></span>
               <UiIcon name="arrow" />
             </Link>
           </footer>
         </section>
 
         <aside className={styles.artStage} aria-hidden="true">
-          <span>Public or private</span>
-          <strong>Four players.<br />One elegant table.</strong>
+          <span>{t("home.publicOrPrivate")}</span>
+          <strong>{t("home.fourPlayers").split("\n").map((line, index) => <span key={line}>{index > 0 ? <br /> : null}{line}</span>)}</strong>
         </aside>
       </div>
 
       <section id="open-rooms" className={styles.directory} aria-labelledby="open-rooms-title">
         <div className={styles.directoryHeading}>
           <div>
-            <span className={styles.eyebrow}>Live table directory</span>
-            <h2 id="open-rooms-title">Open Rooms</h2>
+            <span className={styles.eyebrow}>{t("home.directoryKicker")}</span>
+            <h2 id="open-rooms-title">{t("home.openRooms")}</h2>
           </div>
-          <p>Public tables update live. Private rooms remain available by code.</p>
+          <p>{t("home.directoryDetail")}</p>
         </div>
 
         {publicRooms.length === 0 ? (
           <div className={styles.emptyDirectory}>
-            <strong>No open tables yet.</strong>
-            <span>Create the first public room, or join a private room with its code.</span>
+            <strong>{t("home.noRooms")}</strong>
+            <span>{t("home.noRoomsDetail")}</span>
           </div>
         ) : (
           <div className={styles.roomList}>
             <div className={styles.roomListHeader} aria-hidden="true">
-              <span>Room</span><span>Host</span><span>Players</span><span>Status</span><span />
+              <span>{t("home.room")}</span><span>{t("common.host")}</span><span>{t("home.players")}</span><span>{t("home.status")}</span><span />
             </div>
             {publicRooms.map((room) => (
               <article key={room.code} className={styles.roomRow}>
                 <strong className={styles.directoryCode}>#{room.code}</strong>
                 <span className={styles.hostName}>{room.hostDisplayName}</span>
                 <span className={styles.occupancy}>{room.playerCount} / {room.maxPlayers}</span>
-                <span className={styles.waiting}><i aria-hidden="true" /> Waiting</span>
+                <span className={styles.waiting}><i aria-hidden="true" /> {t("common.waiting")}</span>
                 <button
                   type="button"
                   disabled={unavailable || room.playerCount >= room.maxPlayers}
                   onClick={() => void joinPublicRoom(room.code)}
                 >
-                  Join Table <UiIcon name="arrow" />
+                  {t("home.joinTable")} <UiIcon name="arrow" />
                 </button>
               </article>
             ))}

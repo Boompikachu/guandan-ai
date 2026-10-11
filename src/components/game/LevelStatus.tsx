@@ -1,4 +1,7 @@
+"use client";
+
 import type { LevelRank, TeamId } from "../../game/types";
+import { useI18n } from "../i18n/I18nProvider";
 import styles from "./LevelStatus.module.css";
 
 type LevelStatusProps = {
@@ -14,21 +17,22 @@ export function LevelStatus({
   teamLevels,
   compact = false,
 }: LevelStatusProps) {
+  const { t } = useI18n();
   return (
-    <section className={`${styles.status} ${compact ? styles.compact : ""}`} aria-label="Guandan match levels">
+    <section className={`${styles.status} ${compact ? styles.compact : ""}`} aria-label={t("game.matchStatus")}>
       <span className={styles.mobileSummary} aria-hidden="true">
-        LEVEL {currentLevelRank}/{activeLevelTeam} · A:{teamLevels.A} · B:{teamLevels.B}
+        {t("game.levelSummary", { level: currentLevelRank, team: activeLevelTeam, teamA: teamLevels.A, teamB: teamLevels.B })}
       </span>
       <div className={styles.current}>
-        <small>Current Level</small>
+        <small>{t("game.currentLevel")}</small>
         <strong>{currentLevelRank}</strong>
-        <span>Team {activeLevelTeam} · Active Level</span>
+        <span>{t("common.team", { team: activeLevelTeam })} · {t("game.activeLevel")}</span>
       </div>
       <div className={`${styles.team} ${styles.teamA} ${activeLevelTeam === "A" ? styles.active : ""}`}>
-        <small>Team A</small><strong>Level {teamLevels.A}</strong>
+        <small>{t("common.teamA")}</small><strong>{t("common.level", { level: teamLevels.A })}</strong>
       </div>
       <div className={`${styles.team} ${styles.teamB} ${activeLevelTeam === "B" ? styles.active : ""}`}>
-        <small>Team B</small><strong>Level {teamLevels.B}</strong>
+        <small>{t("common.teamB")}</small><strong>{t("common.level", { level: teamLevels.B })}</strong>
       </div>
     </section>
   );

@@ -37,7 +37,7 @@
   min-height: 0;
   padding: clamp(0.4rem, 0.8vw, 0.75rem);
   overflow: hidden;
-  background: repeating-linear-gradient(93deg, transparent 0 31px, rgb(0 0 0 / 14%) 32px 35px), linear-gradient(135deg, #24160d, #080605 38%, #20120b);
+  background: repeating-linear-gradient(93deg, transparent 0 31px, rgb(0 0 0 / 18%) 32px 35px), linear-gradient(135deg, #17100b, #050505 42%, #140c08);
 }
 
 .table {
@@ -53,7 +53,7 @@
   overflow: hidden;
   border: 1px solid rgb(229 188 107 / 42%);
   border-radius: clamp(1.5rem, 4vw, 4rem);
-  background: radial-gradient(ellipse at 50% 42%, rgb(31 100 77 / 34%), transparent 52%), repeating-linear-gradient(30deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 4px), linear-gradient(145deg, #123e33, #06231e 58%, #031410);
+  background: radial-gradient(ellipse at 50% 42%, rgb(31 100 77 / 23%), transparent 54%), repeating-linear-gradient(30deg, rgb(255 255 255 / 0.9%) 0 1px, transparent 1px 4px), linear-gradient(145deg, #0b271f, #041411 60%, #020908);
   box-shadow: inset 0 0 0 0.35rem rgb(0 0 0 / 28%), inset 0 0 6rem rgb(0 0 0 / 65%);
 }
 
@@ -98,6 +98,15 @@
 .suggestion { padding-left: 0.7rem; border-left: 1px solid rgb(229 188 107 / 18%); }
 .suggestion button { margin-top: 0.4rem; padding: 0.32rem 0.65rem; border: 1px solid #d9b668; border-radius: 0.4rem; color: #1b140a; background: #d9b668; font-size: 0.56rem; font-weight: 900; cursor: pointer; }
 .tip { padding-left: 0.7rem; border-left: 1px solid rgb(229 188 107 / 18%); }
+.table[data-presentation-mode="compact"] .coachDesktop p,
+.table[data-presentation-mode="compact"] .tip {
+  display: none;
+}
+
+.table[data-presentation-mode="compact"] .coach {
+  grid-template-columns: 1fr;
+  padding-block: 0.45rem;
+}
 .event { position: absolute; z-index: 4; top: 0.75rem; right: 0.9rem; max-width: 16rem; padding: 0.4rem 0.6rem; border: 1px solid rgb(229 188 107 / 20%); border-radius: 0.5rem; color: #bbb5a7; background: rgb(3 11 12 / 84%); font-size: 0.55rem; }
 
 .openingFrame {
@@ -110,6 +119,7 @@
 }
 
 .openingTable {
+  position: relative;
   display: grid;
   width: min(100%, 78rem);
   min-height: 100%;
@@ -375,12 +385,22 @@
 .steps b { color: #b98b43; font-family: var(--font-display); font-size: 1.6rem; }
 .steps strong { margin-top: 0.6rem; color: #e9d7ae; font-size: 0.82rem; }
 .steps span { margin-top: 0.35rem; color: #879491; font-size: 0.7rem; line-height: 1.45; }
+.learningModes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin-top: 2rem; }
+.learningModes article { position: relative; display: grid; min-height: 13rem; align-content: start; padding: 1.25rem; overflow: hidden; border: 1px solid rgb(229 188 107 / 22%); border-radius: 1rem; background: linear-gradient(145deg, rgb(255 255 255 / 4%), rgb(0 0 0 / 12%)); }
+.learningModes article > span { color: #a68e61; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.11em; text-transform: uppercase; }
+.learningModes h2 { margin: 0.55rem 0 0; color: #edd8aa; font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.45rem); }
+.learningModes p { margin: 0.45rem 0 1rem; color: #8e9b97; font-size: 0.78rem; line-height: 1.55; }
+.learningModes button { align-self: end; justify-self: start; min-height: 2.7rem; margin-top: auto; padding: 0.5rem 0.9rem; border: 1px solid rgb(229 188 107 / 34%); border-radius: 0.55rem; color: #e0c88f; background: rgb(229 188 107 / 6%); font-weight: 850; cursor: pointer; }
+.learningModes .recommendedMode { border-color: rgb(229 188 107 / 58%); background: radial-gradient(circle at 85% 10%, rgb(229 188 107 / 15%), transparent 44%), linear-gradient(145deg, rgb(24 48 42 / 92%), rgb(5 14 14 / 96%)); box-shadow: 0 0 2rem rgb(229 188 107 / 8%); }
+.learningModes .recommendedMode button { color: #171108; border-color: #efd08a; background: linear-gradient(180deg, #f0d38e, #bd8337); }
 .onboardingActions { display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1.5rem; }
 .onboardingActions button { min-height: 3rem; padding: 0.6rem 1.1rem; border: 1px solid rgb(229 188 107 / 30%); border-radius: 0.6rem; color: #ddc590; background: rgb(255 255 255 / 3%); font-weight: 850; }
 .onboardingActions .start { color: #171108; border-color: #efd08a; background: linear-gradient(180deg, #f0d38e, #bd8337); }
 
 @media (max-width: 760px) {
   .steps { grid-template-columns: 1fr; }
+  .learningModes { grid-template-columns: 1fr; }
+  .learningModes article { min-height: 11rem; }
   .steps article { min-height: auto; }
   .onboarding { align-items: start; overflow-y: auto; }
   .onboardingActions { flex-direction: column; }
@@ -438,7 +458,14 @@
 
   .metrics > span b::before { content: "R"; }
   .metrics > section { min-width: 0; flex: 0 1 auto; }
-  .header nav { display: contents; }
+  .header nav {
+    display: flex;
+    min-width: 0;
+    grid-column: 3;
+    grid-row: 1;
+    align-items: center;
+    gap: 0.18rem;
+  }
 
   .header button {
     min-width: 0;
@@ -448,11 +475,11 @@
     font-size: 0.5rem;
   }
 
-  .header nav > button:not(.leave) { grid-column: 3; grid-row: 1; }
   .header .leave {
+    position: absolute;
+    top: max(0.16rem, env(safe-area-inset-top));
+    left: max(0.34rem, env(safe-area-inset-left));
     width: 1.78rem;
-    grid-column: 1;
-    grid-row: 1;
     padding: 0;
     overflow: hidden;
     font-size: 0;
@@ -476,11 +503,12 @@
     width: 100%;
     max-width: 100%;
     grid-template-columns: clamp(5.7rem, 15vw, 7rem) minmax(0, 1fr) clamp(5.7rem, 15vw, 7rem);
-    grid-template-rows: 1.9rem minmax(4.5rem, 1fr) clamp(8.8rem, 48dvh, 9.5rem);
+    grid-template-rows: 1.8rem minmax(8.55rem, 1fr) clamp(9.4rem, 43dvh, 10.35rem);
     gap: 0.1rem;
     padding: 0.2rem;
     overflow: hidden;
     border-radius: 0.9rem;
+    background: linear-gradient(145deg, #0a211d, #04100e 62%, #070706);
   }
 
   .top { width: min(100%, 13rem); }

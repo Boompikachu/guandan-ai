@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import type { GamePresentationMode } from "../../lib/game-presentation";
+import type { RookieAssistRecommendation } from "../../lib/rookie-assist";
+import { PresentationModeToggle } from "./PresentationModeToggle";
+import { RookieAssist } from "./RookieAssist";
 import { TurnIndicator } from "./TurnIndicator";
+import { useI18n } from "../i18n/I18nProvider";
 import styles from "./GameControls.module.css";
 
 type InterpretationChoice = {
@@ -23,6 +28,10 @@ type GameControlsProps = {
   playLabel?: string | null;
   turnDeadlineAt?: number | null;
   errorMessage: string | null;
+  assistRecommendations?: readonly RookieAssistRecommendation[];
+  presentationMode?: GamePresentationMode;
+  onPresentationModeChange?: (mode: GamePresentationMode) => void;
+  onChooseAssist?: (recommendation: RookieAssistRecommendation) => void;
   onSelectInterpretation: (key: string) => void;
   onPlay: () => void;
   onPass: () => void;
@@ -42,11 +51,20 @@ export function GameControls({
   playLabel = null,
   turnDeadlineAt = null,
   errorMessage,
+  assistRecommendations = [],
+  presentationMode = "guided",
+  onPresentationModeChange,
+  onChooseAssist,
   onSelectInterpretation,
   onPlay,
   onPass,
   onClear,
 }: GameControlsProps) {
+  const { t } = useI18n();
+  const showPromptBlock = presentationMode === "guided"
+    || selectionTone === "invalid"
+    || selectionTone === "choice"
+    || Boolean(errorMessage);
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -74,9 +92,13 @@ export function GameControls({
   }, [canPass, canPlay, onClear, onPass, onPlay, selectedCount]);
 
   return (
-    <section className={`control-panel ${styles.panel}`} aria-label="Game controls">
-      <TurnIndicator deadlineAt={turnDeadlineAt} owner="You" isLocal compact />
-      <div className={styles.promptBlock}>
+    <section
+      className={`control-panel ${styles.panel} ${styles[presentationMode]}`}
+      aria-label={t("game.controls")}
+      data-presentation-mode={presentationMode}
+    >
+      <TurnIndicator deadlineAt={turnDeadlineAt} owner={t("common.you")} isLocal compact />
+      {showPromptBlock ? <div className={`${styles.promptBlock} ${selectionTone === "invalid" || selectionTone === "choice" || errorMessage ? styles.needsAttention : ""}`}>
         <p className={styles.prompt}>{prompt}</p>
         <p className={`${styles.feedback} ${styles[selectionTone]}`} aria-live="polite">
           {selectionMessage}
@@ -84,11 +106,19 @@ export function GameControls({
         {errorMessage ? (
           <p className={styles.error} role="alert">{errorMessage}</p>
         ) : null}
-      </div>
+      </div> : null}
+
+      {onChooseAssist ? (
+        <RookieAssist
+          recommendations={assistRecommendations}
+          onChoose={onChooseAssist}
+          presentationMode={presentationMode}
+        />
+      ) : null}
 
       {interpretations.length > 1 ? (
         <fieldset className={styles.picker}>
-          <legend>Choose wildcard meaning</legend>
+          <legend>{t("game.chooseWildcard")}</legend>
           <div className={styles.choices}>
             {interpretations.map((choice) => (
               <label key={choice.key} className={styles.option}>
@@ -111,15 +141,31 @@ export function GameControls({
         </fieldset>
       ) : null}
 
-      <div className={`${styles.selectionTray} ${styles[selectionTone]}`} aria-label={`${selectedCount} selected cards`}>
-        <span>Selected · {selectedCount} {selectedCount === 1 ? "Card" : "Cards"}</span>
+      <div className={`${styles.selectionTray} ${styles[selectionTone]}`} aria-label={t("game.selected", {
+        count: selectedCount,
+        cards: selectedCount === 1 ? t("common.card", { count: "" }).trim() : t("common.cards", { count: "" }).trim(),
+      })}>
+        <span>{t("game.selected", {
+          count: selectedCount,
+          cards: selectedCount === 1 ? t("common.card", { count: "" }).trim() : t("common.cards", { count: "" }).trim(),
+        })}</span>
         <div className={styles.selectedChips}>
           {selectedLabels.length > 0
             ? selectedLabels.map((label, index) => <i key={`${label}-${index}`}>{label}</i>)
-            : <small>No cards selected</small>}
+            : <small>{t("game.noCardsSelected")}</small>}
         </div>
-        <strong>{playLabel ?? (selectedCount > 0 ? "Check combination…" : "Choose from your hand")}</strong>
+        <strong>{selectionTone === "invalid" || selectionTone === "choice"
+          ? selectionMessage
+          : playLabel ?? (selectedCount > 0 ? t("game.checkCombination") : t("game.chooseHand"))}</strong>
       </div>
+
+      {onPresentationModeChange ? (
+        <PresentationModeToggle
+          mode={presentationMode}
+          onChange={onPresentationModeChange}
+          className={styles.modeToggle}
+        />
+      ) : null}
 
       <div className={styles.actions}>
         <button
@@ -127,14 +173,14 @@ export function GameControls({
           disabled={!canPass}
           onClick={onPass}
         >
-          Pass <kbd>P</kbd>
+          {t("game.pass")} <kbd>P</kbd>
         </button>
         <button
           type="button"
           disabled={selectedCount === 0}
           onClick={onClear}
         >
-          Clear <kbd>Esc</kbd>
+          {t("game.clear")} <kbd>Esc</kbd>
         </button>
         <button
           type="button"
@@ -143,10 +189,10 @@ export function GameControls({
           onClick={onPlay}
         >
           {canPlay
-            ? `Play · ${playLabel ?? selectedCount}`
+            ? t("game.playWith", { label: playLabel ?? selectedCount })
             : selectedCount > 0
-              ? "Invalid Selection"
-              : "Play"}
+              ? t("game.invalidSelection")
+              : t("game.play")}
           <kbd>Enter</kbd>
         </button>
       </div>

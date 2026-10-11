@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import {
   COMPETITIVE_RANK_STANDARDS,
-  formatCompetitiveRank,
   getRankProgress,
 } from "../../competitive/rating";
+import { competitiveRankLabel } from "../../i18n";
 import { getOrCreateAnonymousPlayerId } from "../../lib/competitive-identity";
 import type {
   ClientToServerEvents,
@@ -16,6 +16,7 @@ import type {
 } from "../../shared/multiplayer-protocol";
 import { CompetitiveRankBadge } from "./CompetitiveRankBadge";
 import styles from "./Leaderboard.module.css";
+import { useI18n } from "../i18n/I18nProvider";
 
 type LeaderboardSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -28,6 +29,7 @@ export function LeaderboardView({
   loading?: boolean;
   errorMessage?: string | null;
 }) {
+  const { language, t } = useI18n();
   const current = snapshot.currentPlayer;
   const progress = current ? getRankProgress(current.rating) : null;
   const progressPercent = progress?.nextRating
@@ -45,30 +47,27 @@ export function LeaderboardView({
   return (
     <main className={styles.page}>
       <div className={styles.ambient} aria-hidden="true" />
-      <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Return to Guandan Go home">
+      <header className={styles.header} data-language-reserve="">
+        <Link href="/" className={styles.brand} aria-label={t("common.backHome")}>
           <span aria-hidden="true">掼</span>
-          <div><strong>Guandan Go</strong><small>Competitive Hall</small></div>
+          <div><strong>Guandan Go</strong><small>{t("leaderboard.hall")}</small></div>
         </Link>
-        <Link href="/" className={styles.homeLink}>← Back to Home</Link>
+        <Link href="/" className={styles.homeLink}>← {t("common.backHome")}</Link>
       </header>
 
       <div className={styles.content}>
         <section className={styles.hero}>
-          <span className={styles.kicker}>Competitive standings</span>
-          <h1>Leaderboard</h1>
-          <p>
-            Team Elo rewards completed four-player Online matches. Your Current Level at the
-            table remains completely separate from competitive Rating.
-          </p>
+          <span className={styles.kicker}>{t("leaderboard.kicker")}</span>
+          <h1>{t("leaderboard.title")}</h1>
+          <p>{t("leaderboard.intro")}</p>
         </section>
 
         <section className={styles.currentCard} aria-labelledby="your-rank-title">
           <div className={styles.currentHeading}>
             <div>
-              <span>Your rank</span>
+              <span>{t("leaderboard.yourRank")}</span>
               <h2 id="your-rank-title">
-                {current ? `#${current.position}` : "Not ranked yet"}
+                {current ? `#${current.position}` : t("leaderboard.notRanked")}
               </h2>
             </div>
             {current ? <CompetitiveRankBadge rank={current.tier} /> : null}
@@ -77,28 +76,28 @@ export function LeaderboardView({
             <>
               <div className={styles.ratingLine}>
                 <strong>{current.rating}</strong>
-                <span>Rating</span>
+                <span>{t("common.rating")}</span>
                 <i aria-hidden="true" />
-                <span>{current.wins} wins</span>
-                <span>{current.losses} losses</span>
+                <span>{t("leaderboard.wins", { count: current.wins })}</span>
+                <span>{t("leaderboard.losses", { count: current.losses })}</span>
               </div>
               <div className={styles.progressTrack} aria-label={
                 progress.highestRank
-                  ? "Highest competitive rank achieved"
-                  : `${progress.ratingToNext} Rating to ${formatCompetitiveRank(progress.nextRank!)}`
+                  ? t("leaderboard.highest")
+                  : t("leaderboard.toRank", { count: progress.ratingToNext ?? 0, rank: competitiveRankLabel(progress.nextRank!, language) })
               }>
                 <span style={{ width: `${progressPercent}%` }} />
               </div>
               <p>
                 {progress.highestRank
-                  ? "Highest Rank"
-                  : `${progress.ratingToNext} to ${formatCompetitiveRank(progress.nextRank!)}`}
-                <small>{current.matchesPlayed} completed matches</small>
+                  ? t("leaderboard.highest")
+                  : t("leaderboard.toRank", { count: progress.ratingToNext ?? 0, rank: competitiveRankLabel(progress.nextRank!, language) })}
+                <small>{t("leaderboard.completed", { count: current.matchesPlayed })}</small>
               </p>
             </>
           ) : (
             <p className={styles.unrankedMessage}>
-              Your Gold 1000 profile appears here after your competitive identity is registered.
+              {t("leaderboard.profile")}
             </p>
           )}
         </section>
@@ -106,26 +105,26 @@ export function LeaderboardView({
         <div className={styles.grid}>
           <section className={styles.board} aria-labelledby="standings-title">
             <div className={styles.sectionHeading}>
-              <div><span>Top 100</span><h2 id="standings-title">Player standings</h2></div>
-              {loading ? <small className={styles.loading}>Updating…</small> : null}
+              <div><span>{t("leaderboard.top")}</span><h2 id="standings-title">{t("leaderboard.standings")}</h2></div>
+              {loading ? <small className={styles.loading}>{t("leaderboard.updating")}</small> : null}
             </div>
             {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
             {!loading && snapshot.entries.length === 0 ? (
               <div className={styles.empty}>
-                <strong>No completed matches yet.</strong>
-                <span>The first rated four-player Online match will establish the board.</span>
+                <strong>{t("leaderboard.empty")}</strong>
+                <span>{t("leaderboard.emptyDetail")}</span>
               </div>
             ) : (
               <div className={styles.tableWrap}>
                 <table>
                   <thead>
                     <tr>
-                      <th>Position</th>
-                      <th>Player</th>
-                      <th>Rating</th>
-                      <th>Tier</th>
-                      <th>Wins</th>
-                      <th>Losses</th>
+                      <th>{t("leaderboard.position")}</th>
+                      <th>{t("leaderboard.player")}</th>
+                      <th>{t("common.rating")}</th>
+                      <th>{t("leaderboard.tier")}</th>
+                      <th>{t("leaderboard.winsHeader")}</th>
+                      <th>{t("leaderboard.lossesHeader")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -135,7 +134,7 @@ export function LeaderboardView({
                         className={entry.position === currentPosition ? styles.currentRow : undefined}
                       >
                         <td><strong>#{entry.position}</strong></td>
-                        <td>{entry.displayName}{entry.position === currentPosition ? <small>You</small> : null}</td>
+                        <td>{entry.displayName}{entry.position === currentPosition ? <small>{t("common.you")}</small> : null}</td>
                         <td><b>{entry.rating}</b></td>
                         <td><CompetitiveRankBadge rank={entry.tier} compact /></td>
                         <td>{entry.wins}</td>
@@ -150,7 +149,7 @@ export function LeaderboardView({
 
           <aside className={styles.standards} aria-labelledby="rank-standards-title">
             <div className={styles.sectionHeading}>
-              <div><span>Competitive tiers</span><h2 id="rank-standards-title">Rank Standards</h2></div>
+              <div><span>{t("leaderboard.tiers")}</span><h2 id="rank-standards-title">{t("leaderboard.standards")}</h2></div>
             </div>
             <div className={styles.standardList}>
               {COMPETITIVE_RANK_STANDARDS.map((standard) => (
@@ -165,9 +164,9 @@ export function LeaderboardView({
               ))}
             </div>
             <div className={styles.notes}>
-              <p>Rating changes only after completed four-human Online matches.</p>
-              <p>Stronger opponents influence Elo gain and loss.</p>
-              <p>Tutorials, local games, abandoned matches, and cancellations do not affect Rating.</p>
+              <p>{t("leaderboard.noteOne")}</p>
+              <p>{t("leaderboard.noteTwo")}</p>
+              <p>{t("leaderboard.noteThree")}</p>
             </div>
           </aside>
         </div>
@@ -177,6 +176,7 @@ export function LeaderboardView({
 }
 
 export function Leaderboard() {
+  const { t } = useI18n();
   const [snapshot, setSnapshot] = useState<LeaderboardSnapshot>({
     entries: [],
     currentPlayer: null,
@@ -195,7 +195,7 @@ export function Leaderboard() {
         if (!active) return;
         setLoading(false);
         if (!result.success) {
-          setErrorMessage(result.error.message);
+          setErrorMessage("LEADERBOARD_UNAVAILABLE");
           return;
         }
         setSnapshot({ entries: result.entries, currentPlayer: result.currentPlayer });
@@ -207,7 +207,7 @@ export function Leaderboard() {
     socket.on("connect_error", () => {
       if (!active) return;
       setLoading(false);
-      setErrorMessage("The competitive standings are temporarily unavailable.");
+      setErrorMessage("LEADERBOARD_UNAVAILABLE");
     });
     socket.connect();
 
@@ -221,7 +221,9 @@ export function Leaderboard() {
     <LeaderboardView
       snapshot={stableEmptySnapshot}
       loading={loading}
-      errorMessage={errorMessage}
+      errorMessage={errorMessage === "LEADERBOARD_UNAVAILABLE"
+        ? t("leaderboard.unavailable")
+        : errorMessage}
     />
   );
 }

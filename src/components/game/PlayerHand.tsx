@@ -3,6 +3,7 @@
 import {
   memo,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -11,15 +12,18 @@ import {
 import type { Card as GameCard, LevelRank, Seat } from "../../game/types";
 import {
   cardsInDisplayOrder,
+  type HandSortMode,
   moveHandCard,
   reconcileHandDisplayOrder,
   sortHandCardIds,
 } from "../../lib/hand-display-order";
 import { canStartHandReorder } from "../../lib/pointer-gesture";
+import { playerLabel as playerLabelForSeat } from "../../lib/game-ui";
 import { Card } from "./Card";
 import { PlayerStatus } from "./PlayerStatus";
 import styles from "./PlayerHand.module.css";
 import { useUniformFanLayout } from "./useUniformFanLayout";
+import { useI18n } from "../i18n/I18nProvider";
 
 type PlayerHandProps = {
   seat: Seat;
@@ -29,12 +33,14 @@ type PlayerHandProps = {
   isCurrent: boolean;
   finishPosition: number | null;
   selectedCardIds?: ReadonlySet<string>;
+  suggestedCardIds?: ReadonlySet<string>;
   interactiveCardIds?: ReadonlySet<string>;
   revealedCardId?: string;
   fullSizeCards?: boolean;
   appearance?: "default" | "primary" | "compact";
   reorderable?: boolean;
   onToggleCard?: (cardId: string) => void;
+  focusCardRequest?: { cardId: string; token: number } | null;
 };
 
 type ReorderPointer = {
@@ -53,22 +59,33 @@ function PlayerHandComponent({
   isCurrent,
   finishPosition,
   selectedCardIds = new Set<string>(),
+  suggestedCardIds = new Set<string>(),
   interactiveCardIds,
   revealedCardId,
   fullSizeCards = false,
   appearance = "default",
   reorderable = false,
   onToggleCard,
+  focusCardRequest = null,
 }: PlayerHandProps) {
+  const { language, t } = useI18n();
   const [displayOrders, setDisplayOrders] = useState<Partial<Record<Seat, string[]>>>(() => ({
-    [seat]: sortHandCardIds(cards),
+    [seat]: sortHandCardIds(cards, "RANK", currentLevelRank),
   }));
+  const [displayMode, setDisplayMode] = useState<HandSortMode | "MANUAL">("RANK");
+  const [lastSortMode, setLastSortMode] = useState<HandSortMode>("RANK");
   const [arrangeMode, setArrangeMode] = useState(false);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const reorderPointer = useRef<ReorderPointer | null>(null);
+  const previousLevelRank = useRef(currentLevelRank);
   const reconciledOrder = useMemo(
-    () => reconcileHandDisplayOrder(displayOrders[seat] ?? [], cards),
-    [cards, displayOrders, seat],
+    () => reconcileHandDisplayOrder(
+      displayOrders[seat] ?? [],
+      cards,
+      lastSortMode,
+      currentLevelRank,
+    ),
+    [cards, currentLevelRank, displayOrders, lastSortMode, seat],
   );
   const sortedCards = useMemo(
     () => cardsInDisplayOrder(cards, reconciledOrder),
@@ -77,16 +94,45 @@ function PlayerHandComponent({
 
   const isInteractive = Boolean(onToggleCard && interactiveCardIds);
   const compactCards = !isCurrent && !fullSizeCards;
-  const { containerRef, fanStyle } = useUniformFanLayout(sortedCards.length, {
+  const { containerRef, fanStyle, fanStep } = useUniformFanLayout(sortedCards.length, {
     compact: compactCards,
   });
 
-  const sortHand = useCallback((mode: "RANK" | "SUIT") => {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !focusCardRequest) return;
+    const card = [...container.querySelectorAll<HTMLElement>("[data-card-id]")]
+      .find((candidate) => candidate.dataset.cardId === focusCardRequest.cardId);
+    if (!card) return;
+    const target = Math.max(
+      0,
+      card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2,
+    );
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    container.scrollTo({ left: target, behavior: reduceMotion ? "auto" : "smooth" });
+  }, [containerRef, focusCardRequest]);
+
+  useEffect(() => {
+    if (previousLevelRank.current === currentLevelRank) return;
+    previousLevelRank.current = currentLevelRank;
+    const mode = lastSortMode;
     setDisplayOrders((current) => ({
       ...current,
-      [seat]: sortHandCardIds(cards, mode),
+      [seat]: sortHandCardIds(cards, mode, currentLevelRank),
     }));
-  }, [cards, seat]);
+    setDisplayMode(mode);
+    setArrangeMode(false);
+  }, [cards, currentLevelRank, lastSortMode, seat]);
+
+  const sortHand = useCallback((mode: "RANK" | "SUIT") => {
+    setLastSortMode(mode);
+    setDisplayMode(mode);
+    setArrangeMode(false);
+    setDisplayOrders((current) => ({
+      ...current,
+      [seat]: sortHandCardIds(cards, mode, currentLevelRank),
+    }));
+  }, [cards, currentLevelRank, seat]);
 
   function pointerCardId(event: ReactPointerEvent<HTMLDivElement>): string | null {
     const target = event.target as HTMLElement;
@@ -117,6 +163,7 @@ function PlayerHandComponent({
     if (!pointer.active && movement < 8) return;
     if (!pointer.active) {
       pointer.active = true;
+      setDisplayMode("MANUAL");
       setDraggingCardId(pointer.cardId);
       event.currentTarget.setPointerCapture(event.pointerId);
     }
@@ -135,7 +182,12 @@ function PlayerHandComponent({
       }
     }
     setDisplayOrders((current) => {
-      const currentForHand = reconcileHandDisplayOrder(current[seat] ?? [], cards);
+      const currentForHand = reconcileHandDisplayOrder(
+        current[seat] ?? [],
+        cards,
+        lastSortMode,
+        currentLevelRank,
+      );
       const next = moveHandCard(currentForHand, pointer.cardId, targetIndex);
       if (next.every((id, index) => id === currentForHand[index])) return current;
       return { ...current, [seat]: next };
@@ -159,7 +211,7 @@ function PlayerHandComponent({
         isCurrent ? "player-zone--current" : "",
         isCurrent ? styles.current : "",
       ].filter(Boolean).join(" ")}
-      aria-label={`Player ${seat + 1} hand`}
+      aria-label={t("game.handAria", { name: displayName ?? playerLabelForSeat(seat, language) })}
     >
       <PlayerStatus
         seat={seat}
@@ -169,34 +221,48 @@ function PlayerHandComponent({
         finishPosition={finishPosition}
       />
       {reorderable ? (
-        <div className={styles.handTools} aria-label="Hand arrangement controls">
-          <button type="button" onClick={() => sortHand("RANK")}>Sort Rank</button>
-          <button type="button" onClick={() => sortHand("SUIT")}>Sort Suit</button>
+        <div className={styles.handTools} aria-label={t("game.handControls")}>
+          <button
+            type="button"
+            aria-pressed={displayMode === "RANK"}
+            onClick={() => sortHand("RANK")}
+          >
+            {t("game.sortRank")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={displayMode === "SUIT"}
+            onClick={() => sortHand("SUIT")}
+          >
+            {t("game.sortSuit")}
+          </button>
           <button
             type="button"
             className={arrangeMode ? styles.arrangeActive : ""}
             aria-pressed={arrangeMode}
             onClick={() => setArrangeMode((current) => !current)}
           >
-            {arrangeMode ? "Done" : "Arrange"}
+            {arrangeMode ? t("game.done") : t("game.arrange")}
           </button>
-          <span>{arrangeMode ? "Drag cards into any order" : "Drag with a mouse · use Arrange on touch"}</span>
+          <span>{arrangeMode ? t("game.dragCards") : t("game.dragHint")}</span>
         </div>
       ) : null}
       <div
         ref={containerRef}
         className={`hand-scroll ${styles.scroll}`}
         role="group"
-        aria-label={`Player ${seat + 1} cards`}
+        aria-label={t("game.cardsAria", { name: displayName ?? playerLabelForSeat(seat, language) })}
       >
         {sortedCards.length === 0 ? (
           <div className={styles.empty}>
-            No cards remaining
+            {t("game.noCards")}
           </div>
         ) : (
           <div
             className={`${styles.fan} ${arrangeMode ? styles.arranging : ""}`}
             style={fanStyle}
+            data-hand-axis="horizontal"
+            data-hand-layout={sortedCards.length <= 5 ? "spaced" : "fan"}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={endReorderPointer}
@@ -207,12 +273,14 @@ function PlayerHandComponent({
               return (
                 <div
                   key={card.id}
-                  className={`${styles.cardSlot} ${draggingCardId === card.id ? styles.dragging : ""}`}
+                  className={`${styles.cardSlot} ${compactCards ? styles.compactCardSlot : ""} ${draggingCardId === card.id ? styles.dragging : ""}`}
                   data-card-id={card.id}
                   data-card-slot=""
                   data-fan-card={index === 0 ? "" : undefined}
                   style={{
-                    left: `calc(${index} * var(--fan-step, 2.4rem))`,
+                    left: fanStep === null
+                      ? `${index * (compactCards ? 3.8 : 4.95)}rem`
+                      : `${index * fanStep}px`,
                     zIndex: index + 1,
                   }}
                 >
@@ -220,6 +288,7 @@ function PlayerHandComponent({
                     card={card}
                     currentLevelRank={currentLevelRank}
                     selected={selectedCardIds.has(card.id)}
+                    suggested={suggestedCardIds.has(card.id)}
                     disabled={!enabled}
                     compact={compactCards}
                     revealed={card.id === revealedCardId}

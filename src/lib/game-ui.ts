@@ -1,6 +1,7 @@
 import type { Combination } from "../game/combinations";
 import type { CombinationInterpretation } from "../game/interpretations";
 import type { Card, LevelRank, Rank, Seat, Suit } from "../game/types";
+import { DEFAULT_LANGUAGE, translate, type Language, type TranslationKey } from "../i18n";
 
 export const SUIT_SYMBOLS: Record<Suit, string> = {
   SPADES: "♠",
@@ -20,6 +21,19 @@ export const COMBINATION_LABELS: Record<Combination["type"], string> = {
   RANK_BOMB: "Rank Bomb",
   STRAIGHT_FLUSH: "Straight Flush",
   FOUR_JOKER_BOMB: "Four-Joker Bomb",
+};
+
+const COMBINATION_KEYS: Record<Combination["type"], TranslationKey> = {
+  SINGLE: "combination.SINGLE",
+  PAIR: "combination.PAIR",
+  TRIPLE: "combination.TRIPLE",
+  FULL_HOUSE: "combination.FULL_HOUSE",
+  STRAIGHT: "combination.STRAIGHT",
+  CONSECUTIVE_PAIRS: "combination.CONSECUTIVE_PAIRS",
+  TRIPLE_SEQUENCE: "combination.TRIPLE_SEQUENCE",
+  RANK_BOMB: "combination.RANK_BOMB",
+  STRAIGHT_FLUSH: "combination.STRAIGHT_FLUSH",
+  FOUR_JOKER_BOMB: "combination.FOUR_JOKER_BOMB",
 };
 
 const RANK_ORDER: readonly Rank[] = [
@@ -42,14 +56,21 @@ const RANK_ORDER: readonly Rank[] = [
 
 const SUIT_ORDER: readonly Suit[] = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
 
-export function playerLabel(seat: Seat): string {
-  return `Player ${seat + 1}`;
+export function playerLabel(seat: Seat, language: Language = DEFAULT_LANGUAGE): string {
+  return translate(language, "common.player", { number: seat + 1 });
 }
 
-export function rankLabel(rank: Rank): string {
-  if (rank === "SMALL_JOKER") return "Small Joker";
-  if (rank === "BIG_JOKER") return "Big Joker";
+export function rankLabel(rank: Rank, language: Language = DEFAULT_LANGUAGE): string {
+  if (rank === "SMALL_JOKER") return translate(language, "card.smallJoker");
+  if (rank === "BIG_JOKER") return translate(language, "card.bigJoker");
   return rank;
+}
+
+export function combinationLabel(
+  type: Combination["type"],
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return translate(language, COMBINATION_KEYS[type]);
 }
 
 export function cardShortLabel(card: Card): string {
@@ -60,11 +81,15 @@ export function cardShortLabel(card: Card): string {
 export function cardAccessibleLabel(
   card: Card,
   currentLevelRank: LevelRank,
+  language: Language = DEFAULT_LANGUAGE,
 ): string {
-  if (card.kind === "JOKER") return rankLabel(card.rank);
+  if (card.kind === "JOKER") return rankLabel(card.rank, language);
   const wildcard = card.suit === "HEARTS" && card.rank === currentLevelRank;
-  const suitName = card.suit.charAt(0) + card.suit.slice(1).toLowerCase();
-  return `${card.rank} of ${suitName}${wildcard ? ", wildcard" : ""}`;
+  return translate(language, "card.accessible", {
+    rank: card.rank,
+    suit: translate(language, `card.suit.${card.suit}`),
+    wildcard: wildcard ? translate(language, "card.wildcardSuffix") : "",
+  });
 }
 
 export function sortCardsForDisplay(cards: readonly Card[]): Card[] {
@@ -79,31 +104,50 @@ export function sortCardsForDisplay(cards: readonly Card[]): Card[] {
   });
 }
 
-function joinRanks(ranks: readonly Rank[]): string {
-  return ranks.map(rankLabel).join(" · ");
+function joinRanks(ranks: readonly Rank[], language: Language): string {
+  return ranks.map((rank) => rankLabel(rank, language)).join(" · ");
 }
 
 export function interpretationLabel(
   interpretation: CombinationInterpretation,
+  language: Language = DEFAULT_LANGUAGE,
 ): string {
   const combination = interpretation.combination;
-  const label = COMBINATION_LABELS[combination.type];
+  const label = combinationLabel(combination.type, language);
 
   switch (combination.type) {
     case "SINGLE":
     case "PAIR":
     case "TRIPLE":
-      return `${label} · ${rankLabel(combination.mainRank)}`;
+      return translate(language, "combination.simple", {
+        type: label,
+        rank: rankLabel(combination.mainRank, language),
+      });
     case "FULL_HOUSE":
-      return `${label} · ${rankLabel(combination.tripleRank)} over ${rankLabel(combination.pairRank)}`;
+      return translate(language, "combination.fullHouse", {
+        type: label,
+        triple: rankLabel(combination.tripleRank, language),
+        pair: rankLabel(combination.pairRank, language),
+      });
     case "STRAIGHT":
     case "CONSECUTIVE_PAIRS":
     case "TRIPLE_SEQUENCE":
-      return `${label} · ${joinRanks(combination.sequenceRanks)}`;
+      return translate(language, "combination.sequence", {
+        type: label,
+        ranks: joinRanks(combination.sequenceRanks, language),
+      });
     case "RANK_BOMB":
-      return `${label} · ${combination.cardCount} × ${rankLabel(combination.representedRank)}`;
+      return translate(language, "combination.rankBomb", {
+        type: label,
+        count: combination.cardCount,
+        rank: rankLabel(combination.representedRank, language),
+      });
     case "STRAIGHT_FLUSH":
-      return `${label} · ${joinRanks(combination.sequenceRanks)} ${SUIT_SYMBOLS[combination.suit]}`;
+      return translate(language, "combination.flush", {
+        type: label,
+        ranks: joinRanks(combination.sequenceRanks, language),
+        suit: SUIT_SYMBOLS[combination.suit],
+      });
     case "FOUR_JOKER_BOMB":
       return label;
   }
@@ -111,27 +155,30 @@ export function interpretationLabel(
 
 export function wildcardDetails(
   interpretation: CombinationInterpretation,
+  language: Language = DEFAULT_LANGUAGE,
 ): string[] {
   return interpretation.wildcardAssignments
     .filter((assignment) => assignment.usage === "SUBSTITUTED")
-    .map(
-      (assignment) =>
-        `${cardShortLabel(assignment.physicalCard)} acts as ${assignment.effectiveRank}${SUIT_SYMBOLS[assignment.effectiveSuit]}`,
-    );
+    .map((assignment) => translate(language, "card.wildcardActsAs", {
+      card: cardShortLabel(assignment.physicalCard),
+      rank: assignment.effectiveRank,
+      suit: SUIT_SYMBOLS[assignment.effectiveSuit],
+    }));
 }
 
 export function contextualPrompt(
   currentPlay: CombinationInterpretation | null,
+  language: Language = DEFAULT_LANGUAGE,
 ): string {
-  if (!currentPlay) return "Lead with any valid combination.";
+  if (!currentPlay) return translate(language, "game.leadAny");
 
-  const label = COMBINATION_LABELS[currentPlay.type];
+  const label = combinationLabel(currentPlay.type, language);
   if (
     currentPlay.type === "RANK_BOMB" ||
     currentPlay.type === "STRAIGHT_FLUSH" ||
     currentPlay.type === "FOUR_JOKER_BOMB"
   ) {
-    return `Play a stronger Bomb or Pass. Current play: ${label}.`;
+    return translate(language, "game.strongerBomb", { play: label });
   }
-  return `Play a higher ${label}, a Bomb, or Pass.`;
+  return translate(language, "game.higherOrBomb", { play: label });
 }

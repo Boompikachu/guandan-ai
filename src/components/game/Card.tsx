@@ -3,7 +3,6 @@
 import {
   memo,
   useRef,
-  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { Card as GameCard, LevelRank } from "../../game/types";
@@ -12,42 +11,30 @@ import {
   cardAccessibleLabel,
 } from "../../lib/game-ui";
 import { isTapGesture, type PointerPoint } from "../../lib/pointer-gesture";
+import { useI18n } from "../i18n/I18nProvider";
 import styles from "./Card.module.css";
 
 type CardProps = {
   card: GameCard;
   currentLevelRank: LevelRank;
   selected?: boolean;
+  suggested?: boolean;
   disabled?: boolean;
   compact?: boolean;
+  tableDisplay?: boolean;
   revealed?: boolean;
   selectionManaged?: boolean;
   onToggle?: (cardId: string) => void;
 };
 
-type PipPosition = readonly [x: number, y: number];
-
-const NUMBER_PIPS: Readonly<Record<string, readonly PipPosition[]>> = {
-  "2": [[50, 25], [50, 75]],
-  "3": [[50, 21], [50, 50], [50, 79]],
-  "4": [[31, 25], [69, 25], [31, 75], [69, 75]],
-  "5": [[31, 23], [69, 23], [50, 50], [31, 77], [69, 77]],
-  "6": [[31, 21], [69, 21], [31, 50], [69, 50], [31, 79], [69, 79]],
-  "7": [[31, 18], [69, 18], [50, 35], [31, 50], [69, 50], [31, 82], [69, 82]],
-  "8": [[31, 17], [69, 17], [50, 34], [31, 43], [69, 43], [50, 66], [31, 83], [69, 83]],
-  "9": [[31, 17], [69, 17], [31, 38], [69, 38], [50, 50], [31, 62], [69, 62], [31, 83], [69, 83]],
-  "10": [[31, 14], [69, 14], [50, 28], [31, 38], [69, 38], [31, 62], [69, 62], [50, 72], [31, 86], [69, 86]],
-};
-
 function NormalCardFace({ card, red }: { card: Extract<GameCard, { kind: "SUITED" }>; red: boolean }) {
   const symbol = SUIT_SYMBOLS[card.suit];
   const isCourt = card.rank === "J" || card.rank === "Q" || card.rank === "K";
-  const pips = card.rank === "A" ? [[50, 50] as const] : NUMBER_PIPS[card.rank] ?? [];
   const inkClass = red ? styles.red : styles.black;
 
   return (
     <div className={`${styles.normalFace} ${inkClass}`} aria-hidden="true">
-      <span className={`${styles.cornerIndex} ${styles.topIndex}`}>
+      <span className={`${styles.cornerIndex} ${styles.topIndex}`} data-card-index="top">
         <strong>{card.rank}</strong><i>{symbol}</i>
       </span>
       {isCourt ? (
@@ -55,19 +42,14 @@ function NormalCardFace({ card, red }: { card: Extract<GameCard, { kind: "SUITED
           <i>{symbol}</i><strong>{card.rank}</strong><i>{symbol}</i>
         </span>
       ) : (
-        <span className={`${styles.pipField} ${card.rank === "A" ? styles.aceField : ""}`}>
-          {pips.map(([x, y], index) => (
-            <i
-              key={`${x}-${y}-${index}`}
-              className={y > 50 ? styles.invertedPip : ""}
-              style={{ "--pip-x": `${x}%`, "--pip-y": `${y}%` } as CSSProperties}
-            >
-              {symbol}
-            </i>
-          ))}
+        <span
+          className={styles.centerSuit}
+          data-card-center="suit"
+        >
+          <i data-card-center-symbol="">{symbol}</i>
         </span>
       )}
-      <span className={`${styles.cornerIndex} ${styles.bottomIndex}`}>
+      <span className={`${styles.cornerIndex} ${styles.bottomIndex}`} data-card-index="bottom">
         <strong>{card.rank}</strong><i>{symbol}</i>
       </span>
     </div>
@@ -78,18 +60,22 @@ function CardComponent({
   card,
   currentLevelRank,
   selected = false,
+  suggested = false,
   disabled = false,
   compact = false,
+  tableDisplay = false,
   revealed = false,
   selectionManaged = false,
   onToggle,
 }: CardProps) {
+  const { language, t } = useI18n();
   const pointerStart = useRef<(PointerPoint & { pointerId: number }) | null>(null);
   const lastPointerToggleAt = useRef(0);
   const wildcard =
     card.kind === "SUITED" &&
     card.suit === "HEARTS" &&
     card.rank === currentLevelRank;
+  const levelRank = card.kind === "SUITED" && card.rank === currentLevelRank;
   const redSuit =
     card.kind === "SUITED" &&
     (card.suit === "HEARTS" || card.suit === "DIAMONDS");
@@ -125,16 +111,23 @@ function CardComponent({
         styles.card,
         compact ? "playing-card--compact" : "",
         compact ? styles.compact : "",
+        tableDisplay ? "playing-card--table" : "",
+        tableDisplay ? styles.tableCard : "",
         selected ? "playing-card--selected" : "",
         selected ? styles.selected : "",
+        suggested && !selected ? styles.suggested : "",
+        levelRank ? styles.levelRank : "",
         wildcard ? "playing-card--wildcard" : "",
         wildcard ? styles.wildcard : "",
         revealed ? "playing-card--revealed" : "",
         revealed ? styles.revealed : "",
         onToggle && !disabled ? styles.interactive : "",
       ].filter(Boolean).join(" ")}
-      aria-label={`${cardAccessibleLabel(card, currentLevelRank)}${selected ? ", selected" : ""}`}
+      aria-label={`${cardAccessibleLabel(card, currentLevelRank, language)}${selected ? t("card.selectedSuffix") : ""}`}
       data-card-rank={card.rank}
+      data-card-suit={card.kind === "SUITED" ? card.suit : "JOKER"}
+      data-suggested={suggested ? "true" : undefined}
+      data-level-card={levelRank ? "true" : undefined}
       aria-pressed={selectionManaged || onToggle ? selected : undefined}
       disabled={disabled}
       onPointerDown={handlePointerDown}
@@ -167,15 +160,18 @@ function CardComponent({
           </svg>
           <span className={styles.jokerWord} aria-hidden="true">JOKER</span>
           <span className={styles.jokerTitle}>
-            {card.rank === "BIG_JOKER" ? "RED · BIG JOKER" : "BLACK · SMALL JOKER"}
+            {card.rank === "BIG_JOKER" ? t("card.redBigJoker") : t("card.blackSmallJoker")}
           </span>
         </div>
       ) : (
         <NormalCardFace card={card} red={redSuit} />
       )}
       <span className={styles.deck}>{card.deckIndex + 1}</span>
-      {wildcard ? <span className={styles.badge}>Wild</span> : null}
-      {revealed ? <span className={styles.reveal}>Reveal</span> : null}
+      {wildcard ? <span className={styles.badge} data-wild-label="top">{t("game.wild")}</span> : null}
+      {wildcard ? (
+        <span className={styles.bottomWildBadge} data-wild-label="bottom">{t("game.wild")}</span>
+      ) : null}
+      {revealed ? <span className={styles.reveal}>{t("game.reveal")}</span> : null}
       {selected ? <span className={styles.selectedMark}>✓</span> : null}
     </button>
   );

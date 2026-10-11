@@ -34,6 +34,14 @@ import {
 import { secureServerRandom, type ServerRandomSource } from "./random";
 import type { RoomPlayer, RoomRecord } from "./room-types";
 import { createTimeoutRoundAction, TURN_DURATION_MS } from "../lib/turn-timeout";
+import {
+  deriveMatchTransitionImpacts,
+  withImpactIds,
+} from "../lib/impact-events";
+import {
+  getDealRemainingMs,
+  REAL_DEAL_DURATION_MS,
+} from "../shared/deal-presentation";
 
 const MAX_DISPLAY_NAME_LENGTH = 20;
 const MAX_ROOM_CODE_ATTEMPTS = 100;
@@ -174,6 +182,7 @@ export class RoomManager {
       if (room.status === "COMPLETE") this.recordCompletedMatch(room);
       room.turnSequence ??= 0;
       room.turnDeadlineAt ??= null;
+      room.dealStartedAt ??= null;
       if (room.match?.phase === "ROUND_IN_PROGRESS" && room.turnDeadlineAt === null) {
         this.startTurnTimer(room);
       }
@@ -220,6 +229,7 @@ export class RoomManager {
       opening: null,
       matchResultId: null,
       ratingResults: {},
+      dealStartedAt: null,
       turnDeadlineAt: null,
       turnSequence: 0,
       revision: 1,
@@ -417,8 +427,10 @@ export class RoomManager {
     };
     room.match = null;
     room.turnDeadlineAt = null;
+    room.dealStartedAt = null;
     room.matchResultId = this.random.generatePlayerToken();
     room.ratingResults = {};
+    room.impactEvents = [];
     room.status = "ACTIVE";
     this.touchRoom(room);
     room.revision += 1;
@@ -514,6 +526,7 @@ export class RoomManager {
     opening.revealedCard = revealedCard;
     opening.startingSeat = startingSeat;
     opening.stage = "SHOWING_START_RESULT";
+    room.dealStartedAt = this.now();
     this.touchRoom(room);
     room.revision += 1;
     const starter = room.players[startingSeat]?.name ?? `Player ${startingSeat + 1}`;
@@ -545,6 +558,7 @@ export class RoomManager {
 
     room.match = created.state;
     room.opening = null;
+    room.dealStartedAt = null;
     this.startTurnTimer(room);
     this.touchRoom(room);
     room.revision += 1;
@@ -609,10 +623,14 @@ export class RoomManager {
   advanceAutomaticMatchPhases(roomCode: string): MutationAck {
     const room = this.rooms.get(normalizeRoomCode(roomCode));
     if (!room?.match) return failure("ROOM_NOT_FOUND", "Room or match not found.");
+    const wasAwaitingDeck = room.match.phase === "AWAITING_NEXT_ROUND_DECK";
     const advanced = this.advanceState(room.match);
     if (!advanced.success) return { success: false, error: advanced.error };
     if (advanced.changed) {
       room.match = advanced.state;
+      if (wasAwaitingDeck) {
+        room.dealStartedAt = this.now();
+      }
       room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
       this.startTurnTimer(room);
       this.recordCompletedMatch(room);
@@ -738,7 +756,15 @@ export class RoomManager {
       return;
     }
     room.turnSequence += 1;
-    room.turnDeadlineAt = this.now() + TURN_DURATION_MS;
+    const now = this.now();
+    const interactionReadyAt = room.dealStartedAt === null
+      ? now
+      : Math.max(now, room.dealStartedAt + REAL_DEAL_DURATION_MS);
+    room.turnDeadlineAt = interactionReadyAt + TURN_DURATION_MS;
+  }
+
+  private isDealPresentationActive(room: RoomRecord): boolean {
+    return getDealRemainingMs(room.dealStartedAt, this.now()) > 0;
   }
 
   private commitExpiredTurn(room: RoomRecord): boolean {
@@ -769,6 +795,16 @@ export class RoomManager {
     }
 
     room.match = advanced.state;
+    if (result.state.phase === "AWAITING_NEXT_ROUND_DECK") {
+      room.dealStartedAt = this.now();
+    }
+    room.impactEvents = withImpactIds(
+      deriveMatchTransitionImpacts(match, result.state, {
+        type: "ROUND_ACTION",
+        action,
+      }),
+      `room-${room.revision + 1}`,
+    );
     room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
     const playerName = room.players[seat]?.name ?? `Player ${seat + 1}`;
     const timeoutEvent = action.type === "PASS"
@@ -852,12 +888,17 @@ export class RoomManager {
     if (!room.match || room.status === "LOBBY") {
       return failure("INVALID_PHASE", "The match has not started.");
     }
+    if (this.isDealPresentationActive(room)) {
+      return failure("INVALID_PHASE", "Wait for the deal to finish before acting.");
+    }
 
     if (this.commitExpiredTurn(room)) {
       return failure("STALE_ACTION", "Your action arrived after the turn deadline.");
     }
 
-    const result = applyMatchAction(room.match, createAction(player.seat));
+    const previousMatch = room.match;
+    const action = createAction(player.seat);
+    const result = applyMatchAction(previousMatch, action);
     if (!result.success) {
       return { success: false, error: engineError(result.error, fallbackCode) };
     }
@@ -868,7 +909,14 @@ export class RoomManager {
     const advanced = this.advanceState(result.state);
     if (!advanced.success) return { success: false, error: advanced.error };
 
+    room.impactEvents = withImpactIds(
+      deriveMatchTransitionImpacts(previousMatch, result.state, action),
+      `room-${room.revision + 1}`,
+    );
     room.match = advanced.state;
+    if (result.state.phase === "AWAITING_NEXT_ROUND_DECK") {
+      room.dealStartedAt = this.now();
+    }
     room.status = advanced.state.phase === "MATCH_COMPLETE" ? "COMPLETE" : "ACTIVE";
     this.startTurnTimer(room);
     this.recordCompletedMatch(room);

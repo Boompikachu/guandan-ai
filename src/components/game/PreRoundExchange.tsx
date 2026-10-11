@@ -5,8 +5,10 @@ import {
 import type { PreRoundExchangeMatchEngineState } from "../../game/match-engine";
 import type { Seat } from "../../game/types";
 import { playerLabel } from "../../lib/game-ui";
+import { localizeGameError, translate, type Language } from "../../i18n";
 import { PlayerHand } from "./PlayerHand";
 import styles from "./PreRoundExchange.module.css";
+import { useI18n } from "../i18n/I18nProvider";
 
 type PreRoundExchangeProps = {
   state: PreRoundExchangeMatchEngineState;
@@ -26,6 +28,7 @@ type ExchangePrompt = {
 
 function getExchangePrompt(
   state: PreRoundExchangeMatchEngineState,
+  language: Language,
 ): ExchangePrompt | null {
   const exchange = state.preRoundState;
 
@@ -37,9 +40,9 @@ function getExchangePrompt(
     const options = getTributeCardOptions(exchange, seat);
     return {
       seat,
-      title: `${playerLabel(seat)} must pay Tribute`,
-      instruction: "Select one of the highlighted highest eligible cards.",
-      buttonLabel: "Pay Tribute",
+      title: translate(language, "exchange.mustTribute", { name: playerLabel(seat, language) }),
+      instruction: translate(language, "exchange.tributeInstruction"),
+      buttonLabel: translate(language, "exchange.pay"),
       optionIds: new Set(options.map((card) => card.id)),
     };
   }
@@ -51,12 +54,12 @@ function getExchangePrompt(
     if (!options) return null;
     return {
       seat: task.returningSeat,
-      title: `${playerLabel(task.returningSeat)} must return a card`,
+      title: translate(language, "exchange.mustReturn", { name: playerLabel(task.returningSeat, language) }),
       instruction:
         options.mode === "FALLBACK"
-          ? "No normal return card is available. Return one of your weakest Singles."
-          : `Choose an eligible card to return to ${playerLabel(task.receiver)}.`,
-      buttonLabel: "Return Card",
+          ? translate(language, "exchange.fallbackInstruction")
+          : translate(language, "exchange.returnInstruction", { name: playerLabel(task.receiver, language) }),
+      buttonLabel: translate(language, "exchange.return"),
       optionIds: new Set(options.cards.map((card) => card.id)),
     };
   }
@@ -71,20 +74,21 @@ export function PreRoundExchange({
   onSelectCard,
   onSubmit,
 }: PreRoundExchangeProps) {
-  const prompt = getExchangePrompt(state);
+  const { language, t } = useI18n();
+  const prompt = getExchangePrompt(state, language);
   const exchange = state.preRoundState;
 
   return (
     <main className={styles.stage}>
       <span className={styles.cloud} aria-hidden="true">云</span>
       <section className={styles.panel}>
-        <span className={styles.kicker}>Between rounds</span>
-        <h2>Tribute &amp; Return Tribute</h2>
+        <span className={styles.kicker}>{t("exchange.betweenRounds")}</span>
+        <h2>{t("exchange.title")}</h2>
         <p className={styles.summary}>
-          Complete the required card exchange before the next lead.
+          {t("exchange.summary")}
         </p>
 
-        <div className={styles.counts} aria-label="Player card counts">
+        <div className={styles.counts} aria-label={t("exchange.playerCounts")}>
           {exchange.hands.map((hand, seat) => (
             <span key={seat}>
               <small>P{seat + 1}</small>
@@ -112,7 +116,7 @@ export function PreRoundExchange({
               onToggleCard={onSelectCard}
             />
             {errorMessage ? (
-              <p className={styles.error} role="alert">{errorMessage}</p>
+              <p className={styles.error} role="alert">{localizeGameError(errorMessage, language)}</p>
             ) : null}
             <button
               type="button"
@@ -125,7 +129,7 @@ export function PreRoundExchange({
           </>
         ) : (
           <div className={styles.resolving}>
-            Resolving equal Tribute cards with local random choice…
+            {t("exchange.resolvingEqual")}
           </div>
         )}
       </section>

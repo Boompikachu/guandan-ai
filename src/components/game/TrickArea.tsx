@@ -1,3 +1,5 @@
+"use client";
+
 import type { CombinationInterpretation } from "../../game/interpretations";
 import type { LevelRank } from "../../game/types";
 import {
@@ -5,6 +7,7 @@ import {
   wildcardDetails,
 } from "../../lib/game-ui";
 import { Card } from "./Card";
+import { useI18n } from "../i18n/I18nProvider";
 import styles from "./TrickArea.module.css";
 
 type TrickAreaProps = {
@@ -18,39 +21,44 @@ export function TrickArea({
   playedBy,
   currentLevelRank,
 }: TrickAreaProps) {
+  const { language, t } = useI18n();
   if (!currentPlay) {
     return (
-      <section className={`trick-area ${styles.area}`} aria-label="Current trick">
+      <section className={`trick-area ${styles.area}`} aria-label={t("game.currentTrick")}>
         <div className={styles.content}>
-          <span className={styles.heading}>Current Trick</span>
+          <span className={styles.heading}>{t("game.currentTrick")}</span>
           <div className={styles.empty}>
-            <strong>Fresh trick</strong>
-            <p>The leader may play any valid combination.</p>
+            <strong>{t("game.freshTrick")}</strong>
+            <p>{t("game.freshTrickDetail")}</p>
           </div>
         </div>
       </section>
     );
   }
 
-  const wildcardNotes = wildcardDetails(currentPlay);
+  const wildcardNotes = wildcardDetails(currentPlay, language);
 
   return (
-    <section className={`trick-area ${styles.area}`} aria-label="Current trick">
+    <section className={`trick-area ${styles.area}`} aria-label={t("game.currentTrick")}>
       <div className={styles.content}>
-        <span className={styles.heading}>Current Trick</span>
-        <h2 className={styles.combination}>{interpretationLabel(currentPlay)}</h2>
-        {playedBy ? <span className={styles.lead}>Played by {playedBy}</span> : null}
+        <span className={styles.heading}>{t("game.currentTrick")}</span>
+        {playedBy ? (
+          <span className={styles.lead}>
+            {playedBy === "You" ? t("game.playedByYou") : t("game.playedBy", { name: playedBy })}
+          </span>
+        ) : null}
         <div className={styles.cards}>
           {currentPlay.physicalCards.map((card) => (
             <Card
               key={card.id}
               card={card}
               currentLevelRank={currentLevelRank}
-              compact
+              tableDisplay
               disabled
             />
           ))}
         </div>
+        <h2 className={styles.combination}>{interpretationLabel(currentPlay, language)}</h2>
         {wildcardNotes.length > 0 ? (
           <div className={styles.notes}>
             {wildcardNotes.map((note) => <p key={note}>{note}</p>)}

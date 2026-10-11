@@ -8,6 +8,7 @@ import type {
   ServerToClientEvents,
   SessionAck,
 } from "../shared/multiplayer-protocol";
+import { REAL_DEAL_DURATION_MS } from "../shared/deal-presentation";
 import { RoomManager } from "./room-manager";
 
 type InterServerEvents = Record<string, never>;
@@ -133,7 +134,7 @@ export function attachSocketServer(
   options: { openingResultDelayMs?: number; turnTimerPollMs?: number } = {},
 ): { io: MultiplayerServer; manager: RoomManager } {
   const io: MultiplayerServer = new Server(httpServer);
-  const openingResultDelayMs = options.openingResultDelayMs ?? 2_200;
+  const openingResultDelayMs = options.openingResultDelayMs ?? REAL_DEAL_DURATION_MS;
   const turnTimerPollMs = options.turnTimerPollMs ?? 250;
   const openingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const turnTimer = setInterval(() => {

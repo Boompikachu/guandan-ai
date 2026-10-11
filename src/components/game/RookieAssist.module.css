@@ -1,0 +1,251 @@
+.assist {
+  position: relative;
+  min-width: 17rem;
+  max-width: 27rem;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid rgb(229 188 107 / 24%);
+  border-radius: 0.7rem;
+  color: #dfe5df;
+  background: linear-gradient(145deg, rgb(21 45 40 / 88%), rgb(6 16 16 / 94%));
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.heading,
+.heading > div,
+.disabled {
+  display: flex;
+  align-items: center;
+}
+
+.compact {
+  min-width: 12rem;
+  max-width: 20rem;
+  padding-block: 0.3rem;
+  background: linear-gradient(145deg, rgb(16 31 29 / 92%), rgb(5 12 13 / 96%));
+}
+
+.compact .heading > span {
+  min-width: 0;
+}
+
+.compact .heading > span b {
+  display: inline;
+}
+
+.compact .options {
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.heading {
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.heading > span,
+.disabled > span {
+  overflow: hidden;
+  color: #8fa09b;
+  font-size: 0.48rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.heading b,
+.disabled b {
+  margin-right: 0.35rem;
+  color: #e8c778;
+  letter-spacing: 0.12em;
+}
+
+.heading > div {
+  flex: 0 0 auto;
+  gap: 0.25rem;
+}
+
+.assist button {
+  min-height: 1.5rem;
+  padding: 0.2rem 0.48rem;
+  border: 1px solid rgb(229 188 107 / 28%);
+  border-radius: 0.38rem;
+  color: #ead7ac;
+  background: rgb(229 188 107 / 7%);
+  font-size: 0.48rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.assist button:hover {
+  border-color: rgb(229 188 107 / 60%);
+  background: rgb(229 188 107 / 13%);
+}
+
+.toggle {
+  min-width: 2rem;
+  color: #8bd1a6 !important;
+}
+
+.options {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.35rem;
+}
+
+.options article {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.28rem;
+  border-top: 1px solid rgb(229 188 107 / 10%);
+}
+
+.options article > div {
+  min-width: 0;
+}
+
+.options strong,
+.options p,
+.options small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.options strong {
+  color: #f2dfba;
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+}
+
+.options p,
+.options small,
+.none {
+  margin: 0.1rem 0 0;
+  color: #8f9f9b;
+  font-size: 0.48rem;
+}
+
+.options small {
+  color: #d2b66f;
+}
+
+.options article > button {
+  flex: 0 0 auto;
+  color: #171008;
+  border-color: #e7c77c;
+  background: linear-gradient(180deg, #efd18b, #c89343);
+}
+
+.bomb {
+  border-top-color: rgb(196 71 54 / 42%) !important;
+}
+
+.bomb strong {
+  color: #ffb09f;
+}
+
+.disabled {
+  min-width: 9rem;
+  justify-content: space-between;
+}
+
+@media (max-width: 900px) {
+  .assist {
+    width: 100%;
+    max-width: none;
+    flex: 1 0 100%;
+    order: -1;
+  }
+
+  .compact {
+    min-width: 0;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .assist {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    grid-area: assist;
+    order: initial;
+    padding: 0.1rem 0.24rem;
+    border-radius: 0.32rem;
+  }
+
+  .heading > span { font-size: 0.36rem; }
+  .assist button { min-height: 1.05rem; padding: 0.08rem 0.3rem; font-size: 0.36rem; }
+  .options { margin-top: 0.08rem; }
+  .options article { padding-top: 0.08rem; }
+  .options strong { font-size: 0.45rem; }
+  .options p, .options small { max-width: 36rem; margin-top: 0; font-size: 0.34rem; }
+  .more { display: inline-flex; }
+
+  .assist:not(.compact) {
+    display: flex;
+    min-height: 1.3rem;
+    align-items: center;
+    gap: 0.28rem;
+  }
+
+  .assist:not(.compact) .heading {
+    flex: 0 0 auto;
+  }
+
+  .assist:not(.compact) .heading > span {
+    display: none;
+  }
+
+  .assist:not(.compact) .options {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 0.2rem;
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .assist:not(.compact) .options article {
+    min-width: 9rem;
+    flex: 1 0 auto;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .assist:not(.compact) .options p,
+  .assist:not(.compact) .options small {
+    display: none;
+  }
+
+  .compact {
+    min-height: 1.3rem;
+    padding: 0.08rem 0.2rem;
+  }
+
+  .compact .heading > span b {
+    margin-right: 0.2rem;
+  }
+
+  .compact .options {
+    position: absolute;
+    z-index: 25;
+    right: 0.25rem;
+    bottom: calc(100% + 0.18rem);
+    left: 0.25rem;
+    max-height: 6.5rem;
+    padding: 0.3rem;
+    overflow: auto;
+    border: 1px solid rgb(229 188 107 / 38%);
+    border-radius: 0.45rem;
+    background: rgb(4 10 11 / 98%);
+    box-shadow: 0 0.8rem 2rem rgb(0 0 0 / 64%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assist button { transition: none; }
+}

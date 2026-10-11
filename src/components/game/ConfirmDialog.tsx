@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./ConfirmDialog.module.css";
+import { useI18n } from "../i18n/I18nProvider";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -17,10 +18,11 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
-  cancelLabel = "Cancel",
+  cancelLabel,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   if (!open) return null;
   return (
     <div className={styles.backdrop} role="presentation" onMouseDown={onCancel}>
@@ -32,11 +34,11 @@ export function ConfirmDialog({
         aria-describedby="confirm-dialog-message"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <span className={styles.kicker}>Confirm action</span>
+        <span className={styles.kicker}>{t("game.confirmAction")}</span>
         <h2 id="confirm-dialog-title">{title}</h2>
         <p id="confirm-dialog-message">{message}</p>
         <div className={styles.actions}>
-          <button type="button" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" onClick={onCancel}>{cancelLabel ?? t("common.cancel")}</button>
           <button type="button" className={styles.danger} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </section>

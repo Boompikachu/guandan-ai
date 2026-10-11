@@ -11,6 +11,23 @@
   backdrop-filter: blur(14px);
 }
 
+.modeToggle {
+  flex: 0 0 auto;
+}
+
+.compact {
+  gap: 0.45rem;
+  padding-block: 0.52rem;
+}
+
+.compact .promptBlock:not(.needsAttention) {
+  display: none;
+}
+
+.compact .selectionTray {
+  flex: 1 1 14rem;
+}
+
 .promptBlock {
   min-width: 12rem;
   flex: 1;
@@ -222,6 +239,10 @@
   .actions {
     margin-left: auto;
   }
+
+  .modeToggle {
+    margin-left: auto;
+  }
 }
 
 @media (max-width: 620px) {
@@ -251,6 +272,11 @@
     margin-left: 0;
   }
 
+  .modeToggle {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .actions button,
   .actions .play {
     min-width: 0;
@@ -265,11 +291,11 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    min-height: 3.15rem;
+    min-height: 2.9rem;
     grid-template-areas:
-      "turn actions prompt"
-      "selection selection selection";
-    grid-template-columns: minmax(8rem, 1fr) max-content minmax(8rem, 1fr);
+      "turn selection actions toggle"
+      "assist assist assist assist";
+    grid-template-columns: minmax(5.6rem, auto) minmax(6rem, 1fr) max-content max-content;
     align-items: center;
     gap: 0.12rem 0.3rem;
     padding: 0.2rem 0.28rem;
@@ -282,10 +308,12 @@
     justify-self: start;
   }
 
-  .promptBlock {
-    min-width: 0;
-    grid-area: prompt;
-    overflow: hidden;
+  .promptBlock { display: none; }
+
+  .modeToggle {
+    width: auto;
+    grid-area: toggle;
+    margin: 0;
   }
 
   .prompt { margin: 0; font-size: 0.48rem; white-space: nowrap; }
@@ -296,14 +324,14 @@
     min-width: 0;
     max-width: none;
     max-height: 2rem;
-    grid-area: prompt;
+    grid-area: selection;
     padding: 0.1rem 0.2rem;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
-  .panel:has(.picker) .promptBlock { display: none; }
   .picker legend { font-size: 0.36rem; }
+  .panel:has(.picker) .selectionTray { display: none; }
   .choices { display: flex; width: max-content; gap: 0.12rem; }
   .option { min-width: max-content; padding: 0.1rem 0.18rem; font-size: 0.4rem; }
   .option small { display: none; }
@@ -321,10 +349,10 @@
     padding: 0.08rem 0.25rem;
     overflow: hidden;
     border-radius: 0.3rem;
-    width: min(100%, 28rem);
+    width: 100%;
   }
 
-  .selectionTray > span { flex: 0 0 auto; font-size: 0.35rem; }
+  .selectionTray > span { flex: 0 0 auto; font-size: 0.38rem; }
   .selectionTray > strong { min-width: 0; margin: 0; font-size: 0.42rem; }
   .selectedChips { display: none; }
 
@@ -332,7 +360,7 @@
     display: grid;
     min-width: 0;
     grid-area: actions;
-    grid-template-columns: 3.2rem 3.2rem minmax(4.35rem, 6.2rem);
+    grid-template-columns: 3.35rem 3.35rem minmax(4.6rem, 6.4rem);
     gap: 0.18rem;
     margin: 0;
   }
@@ -351,4 +379,9 @@
 
   .actions .play { font-size: 0.61rem; }
   .actions kbd { display: none; }
+
+  .compact {
+    min-height: 2.5rem;
+    padding: 0.16rem 0.22rem;
+  }
 }

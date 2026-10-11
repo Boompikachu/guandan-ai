@@ -5,6 +5,7 @@ import {
   getOpeningCardValue,
   type DiceContestState,
 } from "../shared/round-opening";
+import { DEFAULT_LANGUAGE, translate, type Language } from "../i18n";
 
 export const TUTORIAL_HUMAN_SEAT: Seat = 0;
 
@@ -35,8 +36,10 @@ export type TutorialOpeningCoachCopy = {
   body: string;
 };
 
-export function tutorialSeatName(seat: Seat): string {
-  return TUTORIAL_SEAT_NAMES[seat];
+export function tutorialSeatName(seat: Seat, language: Language = DEFAULT_LANGUAGE): string {
+  return seat === TUTORIAL_HUMAN_SEAT
+    ? translate(language, "common.you")
+    : TUTORIAL_SEAT_NAMES[seat];
 }
 
 export function getNextTutorialBotRollSeat(
@@ -61,14 +64,15 @@ export function getTutorialAutoFlipSeat(
 
 export function getTutorialOpeningCoachCopy(
   opening: TutorialOpeningState,
+  language: Language = DEFAULT_LANGUAGE,
 ): TutorialOpeningCoachCopy {
   const currentRound = getCurrentRollRound(opening.diceContest);
   const flipperSeat = opening.diceContest.flipperSeat;
   if (opening.phase === "DICE" && currentRound.roundNumber === 1) {
     return {
-      eyebrow: "Opening rule",
-      title: "Who flips first?",
-      body: "Before the cards are dealt, everyone rolls two dice. The highest total earns the right to flip one card. That card decides who leads the first trick.",
+      eyebrow: translate(language, "opening.rule"),
+      title: translate(language, "opening.whoFlips"),
+      body: translate(language, "opening.coachFirst"),
     };
   }
   if (opening.phase === "DICE") {
@@ -80,48 +84,58 @@ export function getTutorialOpeningCoachCopy(
         );
         return previousRound.rolls[seat]?.total === Math.max(...totals);
       })
-      .map(tutorialSeatName)
-      .join(" and ");
+      .map((seat) => tutorialSeatName(seat, language))
+      .join(translate(language, "common.nameListSeparator"));
     return {
-      eyebrow: "Tie for highest",
-      title: `${tiedNames ?? "The tied players"} roll again`,
-      body: "Only the players tied for the highest total reroll two dice. Everyone else is out of the dice contest.",
+      eyebrow: translate(language, "opening.tieHighest"),
+      title: translate(language, "opening.rollAgain", { names: tiedNames ?? translate(language, "opening.tiedPlayers") }),
+      body: translate(language, "opening.coachTie"),
     };
   }
   if (opening.phase === "WAITING_FOR_FLIP" && flipperSeat !== null) {
     return {
       eyebrow: flipperSeat === TUTORIAL_HUMAN_SEAT
-        ? "You won the roll"
-        : `${tutorialSeatName(flipperSeat)} won the roll`,
-      title: `${tutorialSeatName(flipperSeat)} ${flipperSeat === TUTORIAL_HUMAN_SEAT ? "get" : "gets"} to flip`,
-      body: `${tutorialSeatName(flipperSeat)} had the unique highest total. The deck is still complete and no hands have been dealt.`,
+        ? translate(language, "opening.youWon")
+        : translate(language, "opening.nameWon", { name: tutorialSeatName(flipperSeat, language) }),
+      title: translate(language, "opening.getsFlip", { name: tutorialSeatName(flipperSeat, language) }),
+      body: translate(language, "opening.coachWon", { name: tutorialSeatName(flipperSeat, language) }),
     };
   }
   if (opening.phase === "DEALING" && opening.startingSeat !== null) {
     return {
-      eyebrow: `${tutorialSeatName(opening.startingSeat)} leads Round 1`,
-      title: "Now let's deal the cards",
-      body: "The opening leader is locked in. The same complete 108-card deck is now dealt normally: 27 physical cards to each player.",
+      eyebrow: translate(language, "opening.leads", { name: tutorialSeatName(opening.startingSeat, language) }),
+      title: translate(language, "opening.dealTitle"),
+      body: translate(language, "opening.coachDeal"),
     };
   }
   if (opening.revealedCard && flipperSeat !== null && opening.startingSeat !== null) {
     const value = getOpeningCardValue(opening.revealedCard);
     if (value === null) {
       return {
-        eyebrow: "Joker rule",
-        title: "Joker means yourself",
-        body: `${tutorialSeatName(flipperSeat)} flipped ${rankLabel(opening.revealedCard.rank)}. Both Jokers mean “yourself,” so ${tutorialSeatName(flipperSeat)} leads Round 1.`,
+        eyebrow: translate(language, "opening.jokerRule"),
+        title: translate(language, "opening.jokerMeans"),
+        body: translate(language, "opening.coachJoker", {
+          flipper: tutorialSeatName(flipperSeat, language),
+          card: rankLabel(opening.revealedCard.rank, language),
+        }),
       };
     }
     return {
-      eyebrow: `${tutorialSeatName(flipperSeat)} flipped ${rankLabel(opening.revealedCard.rank)}`,
-      title: `${tutorialSeatName(opening.startingSeat)} leads Round 1`,
-      body: `Printed value ${value}. Count clockwise with ${tutorialSeatName(flipperSeat)} as 1; the final count lands on ${tutorialSeatName(opening.startingSeat)}.`,
+      eyebrow: translate(language, "opening.flipped", {
+        name: tutorialSeatName(flipperSeat, language),
+        card: rankLabel(opening.revealedCard.rank, language),
+      }),
+      title: translate(language, "opening.leads", { name: tutorialSeatName(opening.startingSeat, language) }),
+      body: translate(language, "opening.coachCount", {
+        value,
+        flipper: tutorialSeatName(flipperSeat, language),
+        starter: tutorialSeatName(opening.startingSeat, language),
+      }),
     };
   }
   return {
-    eyebrow: "Opening rule",
-    title: "Preparing the opening",
-    body: "Dice choose the Flipper, and the flipped card chooses the first leader.",
+    eyebrow: translate(language, "opening.rule"),
+    title: translate(language, "opening.preparing"),
+    body: translate(language, "opening.coachPreparing"),
   };
 }

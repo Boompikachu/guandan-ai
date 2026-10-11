@@ -3,6 +3,7 @@ import type { Card, Seat } from "../game/types";
 import type { CompetitiveRank } from "../competitive/rating";
 import type { DiceContestState } from "../shared/round-opening";
 import type { RoomCode, RoomVisibility } from "../shared/multiplayer-protocol";
+import type { GameplayImpactEvent } from "../shared/gameplay-impact";
 
 export type RoomPlayer = {
   id: string;
@@ -47,10 +48,12 @@ export type RoomRecord = {
   opening: RoomOpeningState | null;
   matchResultId: string | null;
   ratingResults: Partial<Record<Seat, RoomPlayerRatingResult>>;
+  dealStartedAt: number | null;
   turnDeadlineAt: number | null;
   turnSequence: number;
   revision: number;
   events: string[];
+  impactEvents?: GameplayImpactEvent[];
   createdAt: number;
   lastActivityAt: number;
 };
