@@ -397,6 +397,9 @@ export function OnlineGame({
     <RealDealAnimation
       dealKey={`online-round-${view.roundNumber}-${view.dealStartedAt}`}
       startedAt={view.dealStartedAt}
+      playerNames={Object.fromEntries(
+        view.players.flatMap((player, seat) => player ? [[seat, player.name]] : []),
+      ) as Partial<Record<Seat, string>>}
       onComplete={() => setCompletedDealStartedAt(view.dealStartedAt)}
     />
   ) : null;

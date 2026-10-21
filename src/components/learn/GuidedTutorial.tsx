@@ -16,7 +16,18 @@ import {
 import type { LevelRank, Seat, TeamId } from "../../game/types";
 import { isHeartLevelWildcard } from "../../game/cards";
 import { getTeammateSeat } from "../../game/teams";
-import { applyLocalMatchAction, createRandomDeck } from "../../lib/local-match-session";
+import {
+  createRandomDeck,
+  formatMatchActionError,
+  settleLocalMatchState,
+} from "../../lib/local-match-session";
+import {
+  continuePracticeMatch,
+  createPracticeTableView,
+  createPracticeRoundSummary,
+  PRACTICE_BOT_DELAY_MS,
+  type PracticeRoundSummary,
+} from "../../lib/practice-round";
 import {
   cardShortLabel,
   interpretationLabel,
@@ -67,6 +78,7 @@ import { TurnIndicator } from "../game/TurnIndicator";
 import { RealDealAnimation } from "../game/RealDealAnimation";
 import { HowToPlay } from "../rules/HowToPlay";
 import { QuickStartTutorial } from "./QuickStartTutorial";
+import { PracticeRoundComplete } from "./PracticeRoundComplete";
 import styles from "./GuidedTutorial.module.css";
 import { useI18n } from "../i18n/I18nProvider";
 import { localizeEventMessage, localizeGameError, translate, type Language } from "../../i18n";
@@ -103,7 +115,7 @@ const HiddenBot = memo(function HiddenBot({
 }) {
   const { t } = useI18n();
   return (
-    <section className={`${styles.bot} ${current ? styles.botCurrent : ""}`}>
+    <section className={`${styles.bot} ${current ? styles.botCurrent : ""}`} data-private-hand="hidden">
       <div className={styles.botIdentity}>
         <span aria-hidden="true">{seat + 1}</span>
         <div><strong>{BOT_NAMES[seat]}</strong><small>{t("tutorial.teamRole", {
@@ -187,15 +199,18 @@ function Onboarding({
             <p>{t("tutorial.quickDetail")}</p>
             <button type="button" onClick={onQuickStart}>{t("tutorial.startQuick")}</button>
           </article>
-          <article>
+          <article className={styles.practiceMode}>
             <span>{t("tutorial.completeTable")}</span>
             <h2>{t("tutorial.fullMatch")}</h2>
             <p>{t("tutorial.fullDetail")}</p>
             <button type="button" onClick={onFullStart}>{t("tutorial.playFull")}</button>
           </article>
-        </div>
-        <div className={styles.onboardingActions}>
-          <button type="button" onClick={onRules}>{t("tutorial.reviewRules")}</button>
+          <article>
+            <span>{t("tutorial.rulesModeTag")}</span>
+            <h2>{t("tutorial.rulesMode")}</h2>
+            <p>{t("tutorial.rulesModeDetail")}</p>
+            <button type="button" onClick={onRules}>{t("tutorial.reviewRules")}</button>
+          </article>
         </div>
       </section>
     </main>
@@ -371,6 +386,7 @@ function TutorialOpening({
             mode="embedded"
             dealKey={`guided-opening-${opening.revealedCard?.id ?? "deck"}`}
             startingSeat={opening.startingSeat}
+            playerNames={BOT_NAMES}
             revealedCard={opening.revealedCard}
             coachMessage={t("opening.coachDealBrief")}
             onComplete={onDealComplete}
@@ -415,7 +431,7 @@ function humanExchange(
 export function GuidedTutorial() {
   const { language, t } = useI18n();
   const router = useRouter();
-  const [experience, setExperience] = useState<"QUICK" | "FULL">("QUICK");
+  const [experience, setExperience] = useState<"LANDING" | "QUICK" | "FULL">("LANDING");
   const [state, setState] = useState<MatchEngineState | null>(null);
   const [opening, setOpening] = useState<TutorialOpeningState | null>(null);
   const [events, setEvents] = useState<string[]>([]);
@@ -434,10 +450,11 @@ export function GuidedTutorial() {
     token: number;
   } | null>(null);
   const [impactEvents, setImpactEvents] = useState<GameplayImpactEvent[]>([]);
+  const [roundSummary, setRoundSummary] = useState<PracticeRoundSummary | null>(null);
   const impactSequence = useRef(0);
 
   useEffect(() => {
-    if (experience === "QUICK") void requestGameplayLandscape();
+    if (experience === "QUICK" || experience === "FULL") void requestGameplayLandscape();
   }, [experience]);
 
   const start = useCallback(() => {
@@ -461,6 +478,7 @@ export function GuidedTutorial() {
     setTableToolsIntroduced(false);
     setPresentationMode("guided");
     setImpactEvents([]);
+    setRoundSummary(null);
   }, []);
 
   const rollOpeningSeat = useCallback((seat: Seat) => {
@@ -547,14 +565,22 @@ export function GuidedTutorial() {
       setTableToolsIntroduced(true);
     }
     const rawResult = applyMatchAction(state, action);
-    const result = applyLocalMatchAction(state, action);
+    if (!rawResult.success) {
+      setErrorMessage(formatMatchActionError(rawResult.error));
+      return;
+    }
+
+    const result = rawResult.state.phase === "AWAITING_NEXT_ROUND_DECK"
+      ? { success: true as const, state: rawResult.state, events: [] as string[] }
+      : settleLocalMatchState(rawResult.state, Math.random);
     if (!result.success) {
       setErrorMessage(result.message);
       return;
     }
+
     setState(result.state);
-    if (rawResult.success && rawResult.state.phase === "AWAITING_NEXT_ROUND_DECK") {
-      setDealingRound(result.state.roundNumber);
+    if (rawResult.state.phase === "AWAITING_NEXT_ROUND_DECK") {
+      setRoundSummary(createPracticeRoundSummary(state.matchState, rawResult.state));
     }
     setErrorMessage(null);
     setSelectedCardIds(new Set());
@@ -563,14 +589,29 @@ export function GuidedTutorial() {
     if (result.events.length > 0) {
       setEvents((existing) => [...result.events, ...existing].slice(0, 5));
     }
-    if (rawResult.success) {
-      impactSequence.current += 1;
-      setImpactEvents(withImpactIds(
-        deriveMatchTransitionImpacts(state, rawResult.state, action),
-        `tutorial-${impactSequence.current}`,
-      ));
-    }
+    impactSequence.current += 1;
+    setImpactEvents(withImpactIds(
+      deriveMatchTransitionImpacts(state, rawResult.state, action),
+      `tutorial-${impactSequence.current}`,
+    ));
   }, [dealingRound, state]);
+
+  const continueMatch = useCallback(() => {
+    if (!state || state.phase !== "AWAITING_NEXT_ROUND_DECK") return;
+    const result = continuePracticeMatch(state, Math.random);
+    if (!result.success) {
+      setErrorMessage(result.message);
+      return;
+    }
+    setState(result.state);
+    setRoundSummary(null);
+    setDealingRound(result.state.roundNumber);
+    setEvents(result.events);
+    setSelectedCardIds(new Set());
+    setSelectedInterpretationKey(null);
+    setExchangeCardId(null);
+    setErrorMessage(null);
+  }, [state]);
 
   useEffect(() => {
     if (!state || dealingRound === state.roundNumber) return;
@@ -592,16 +633,20 @@ export function GuidedTutorial() {
       if (!action) return;
       setEvents((current) => [t("tutorial.botMove", { name: BOT_NAMES[botSeat as Seat] }), ...current].slice(0, 5));
       runAction(action);
-    }, 520);
+    }, PRACTICE_BOT_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [dealingRound, runAction, state, t]);
 
   const roundState = state?.phase === "ROUND_IN_PROGRESS" ? state : null;
   const isDealing = state !== null && dealingRound === state.roundNumber;
   const isHumanTurn = !isDealing && roundState?.roundState.currentTurn === HUMAN_SEAT;
-  const humanHand = useMemo(
-    () => roundState?.roundState.hands[HUMAN_SEAT] ?? [],
+  const practiceTableView = useMemo(
+    () => roundState ? createPracticeTableView(roundState.roundState.hands, HUMAN_SEAT) : null,
     [roundState],
+  );
+  const humanHand = useMemo(
+    () => practiceTableView?.ownHand ?? [],
+    [practiceTableView],
   );
   const humanInteractiveIds = useMemo(
     () => new Set(humanHand.map((card) => card.id)),
@@ -675,11 +720,24 @@ export function GuidedTutorial() {
     setExchangeCardId((current) => current === cardId ? null : cardId);
   }, []);
 
+  if (experience === "LANDING") {
+    return (
+      <>
+        <Onboarding
+          onQuickStart={() => setExperience("QUICK")}
+          onFullStart={start}
+          onRules={() => setRulesOpen(true)}
+        />
+        {rulesOpen ? <HowToPlay onClose={() => setRulesOpen(false)} /> : null}
+      </>
+    );
+  }
+
   if (experience === "QUICK") {
     return (
       <>
         <QuickStartTutorial
-          onFullGuidedMatch={start}
+          onFullRound={start}
           onOpenRules={() => setRulesOpen(true)}
           onSkip={() => router.push("/")}
         />
@@ -728,6 +786,19 @@ export function GuidedTutorial() {
         />
         {rulesOpen ? <HowToPlay onClose={() => setRulesOpen(false)} /> : null}
       </>
+    );
+  }
+
+  if (state.phase === "AWAITING_NEXT_ROUND_DECK" && roundSummary) {
+    return (
+      <div className={styles.shell} data-practice-mode="single-player">
+        <ImpactFeedback events={impactEvents} selfSeat={HUMAN_SEAT} playerNames={BOT_NAMES} />
+        <TutorialHeader roundNumber={state.roundNumber} currentLevelRank={state.matchState.currentLevelRank} teamLevels={state.matchState.teamLevels} activeLevelTeam={state.matchState.activeLevelTeam} presentationMode={presentationMode} onPresentationModeChange={setPresentationMode} onRules={() => setRulesOpen(true)} onLeave={() => setLeaveOpen(true)} />
+        <PracticeRoundComplete summary={roundSummary} onContinue={continueMatch} onPlayOnline={() => router.push("/?play=online#online-play")} onHome={() => router.push("/")} />
+        <GameplayOrientationGate />
+        <ConfirmDialog open={leaveOpen} title={t("tutorial.leaveTitle")} message={t("tutorial.leaveMessage")} confirmLabel={t("tutorial.leave")} cancelLabel={t("common.stay")} onCancel={() => setLeaveOpen(false)} onConfirm={() => router.push("/")} />
+        {rulesOpen ? <HowToPlay onClose={() => setRulesOpen(false)} /> : null}
+      </div>
     );
   }
 
@@ -802,16 +873,21 @@ export function GuidedTutorial() {
 
   const hasWildcard = roundState?.roundState.hands[HUMAN_SEAT].some((card) =>
     isHeartLevelWildcard(card, roundState.roundState.currentLevelRank));
+  const teammateWinning = roundState?.roundState.trick.winningSeat === getTeammateSeat(HUMAN_SEAT);
   const coachTitle = exchange
     ? exchange.title
     : isHumanTurn
-      ? currentPlay ? t("tutorial.respond") : t("tutorial.leading")
+      ? currentPlay
+        ? teammateWinning ? t("tutorial.partnerWinningTitle") : t("tutorial.respond")
+        : t("tutorial.leading")
       : t("tutorial.watchTable");
   const coachBody = exchange
     ? exchange.detail
     : isHumanTurn
       ? currentPlay
-        ? t(respondingToBomb ? "tutorial.respondBombDetail" : "tutorial.respondDetail")
+        ? teammateWinning
+          ? t("tutorial.partnerWinningDetail")
+          : t(respondingToBomb ? "tutorial.respondBombDetail" : "tutorial.respondDetail")
         : t("tutorial.leadDetail")
       : t("tutorial.otherTurn", {
           name: roundState?.roundState.currentTurn === null
@@ -826,15 +902,15 @@ export function GuidedTutorial() {
     : coachBody;
 
   return (
-    <div className={styles.shell} data-gameplay-shell="">
+    <div className={styles.shell} data-gameplay-shell="" data-practice-mode="single-player">
       <ImpactFeedback events={impactEvents} selfSeat={HUMAN_SEAT} playerNames={BOT_NAMES} />
       <TutorialHeader roundNumber={state.roundNumber} currentLevelRank={state.matchState.currentLevelRank} teamLevels={state.matchState.teamLevels} activeLevelTeam={state.matchState.activeLevelTeam} presentationMode={presentationMode} onPresentationModeChange={setPresentationMode} onRules={() => setRulesOpen(true)} onLeave={() => setLeaveOpen(true)} />
       {roundState ? (
         <main className={styles.tableFrame}>
           <div className={styles.table} data-presentation-mode={presentationMode}>
-            <div className={styles.top}><HiddenBot seat={2} count={roundState.roundState.hands[2].length} current={roundState.roundState.currentTurn === 2} finished={finishPosition(roundState, 2)} turnDeadlineAt={turnDeadlineAt} /></div>
-            <div className={styles.left}><HiddenBot seat={1} count={roundState.roundState.hands[1].length} current={roundState.roundState.currentTurn === 1} finished={finishPosition(roundState, 1)} turnDeadlineAt={turnDeadlineAt} /></div>
-            <div className={styles.right}><HiddenBot seat={3} count={roundState.roundState.hands[3].length} current={roundState.roundState.currentTurn === 3} finished={finishPosition(roundState, 3)} turnDeadlineAt={turnDeadlineAt} /></div>
+            <div className={styles.top}><HiddenBot seat={2} count={practiceTableView?.cardCounts[2] ?? 0} current={roundState.roundState.currentTurn === 2} finished={finishPosition(roundState, 2)} turnDeadlineAt={turnDeadlineAt} /></div>
+            <div className={styles.left}><HiddenBot seat={1} count={practiceTableView?.cardCounts[1] ?? 0} current={roundState.roundState.currentTurn === 1} finished={finishPosition(roundState, 1)} turnDeadlineAt={turnDeadlineAt} /></div>
+            <div className={styles.right}><HiddenBot seat={3} count={practiceTableView?.cardCounts[3] ?? 0} current={roundState.roundState.currentTurn === 3} finished={finishPosition(roundState, 3)} turnDeadlineAt={turnDeadlineAt} /></div>
             <div className={styles.trick}>
               <TrickArea
                 currentPlay={roundState.roundState.trick.currentPlay}
@@ -892,6 +968,7 @@ export function GuidedTutorial() {
       {isDealing ? (
         <RealDealAnimation
           dealKey={`guided-round-${state.roundNumber}`}
+          playerNames={BOT_NAMES}
           coachMessage={t("opening.coachDealBrief")}
           onComplete={() => setDealingRound(null)}
         />

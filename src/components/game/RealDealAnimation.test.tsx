@@ -5,7 +5,11 @@ import { RealDealAnimation } from "./RealDealAnimation";
 describe("RealDealAnimation", () => {
   it("renders a privacy-safe 108-card clockwise deal shell", () => {
     const markup = renderToStaticMarkup(
-      <RealDealAnimation mode="embedded" startingSeat={2} />,
+      <RealDealAnimation
+        mode="embedded"
+        startingSeat={2}
+        playerNames={{ 0: "You", 1: "Mia", 2: "Ray", 3: "Chen" }}
+      />,
     );
 
     expect(markup).toContain('data-real-deal="true"');
@@ -13,6 +17,10 @@ describe("RealDealAnimation", () => {
     expect(markup).toContain('data-seat-counts="0-0-0-0"');
     expect(markup).toContain('data-private-card-identities="none"');
     expect(markup.match(/data-authoritative-seat=/g)).toHaveLength(4);
+    expect(markup).toContain("Dealing the Round");
+    expect(markup).toContain("27 cards to each player");
+    expect(markup).toContain("Ray leads after the deal");
+    expect(markup).toContain("Mia");
     expect(markup).not.toContain("cardId");
     expect(markup).not.toContain("reconnectToken");
     expect(markup).not.toContain("playerId");

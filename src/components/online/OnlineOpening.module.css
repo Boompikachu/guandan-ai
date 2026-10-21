@@ -1,7 +1,11 @@
 .shell {
   min-height: 100svh;
   color: #f4ead2;
-  background: radial-gradient(circle at 50% 35%, #0a4d3e 0, #052e28 42%, #07100f 100%);
+  background:
+    radial-gradient(circle at 50% 32%, rgb(108 77 36 / 22%), transparent 30%),
+    radial-gradient(circle at 14% 16%, rgb(43 69 82 / 18%), transparent 28%),
+    repeating-linear-gradient(116deg, transparent 0 8px, rgb(255 255 255 / 1%) 9px, transparent 10px 17px),
+    linear-gradient(145deg, #0b1319, #030506 60%, #130b07);
 }
 
 .header {
@@ -31,16 +35,16 @@
 .copy h1 { margin: 0.3rem 0; color: #f1d79a; font-family: var(--font-display); font-size: clamp(1.9rem, 4vw, 3.4rem); text-transform: uppercase; }
 .copy p { margin: 0; color: #c6c7bd; }
 
-.table { position: relative; display: grid; width: min(72rem, 100%); min-height: 30rem; margin: auto; place-items: center; overflow: hidden; border: 1px solid rgb(222 181 93 / 42%); border-radius: 48% / 38%; background: radial-gradient(ellipse, rgb(16 104 77 / 82%), rgb(4 55 45 / 95%) 68%, #05251f); box-shadow: inset 0 0 0 0.55rem #281b12, inset 0 0 0 0.7rem #9b672d, 0 2rem 4rem rgb(0 0 0 / 45%); }
-.table::before { position: absolute; inset: 16%; border: 1px solid rgb(220 181 90 / 24%); border-radius: 50%; content: ""; }
+.table { position: relative; display: grid; width: min(72rem, 100%); min-height: 30rem; margin: auto; place-items: center; overflow: hidden; border: 1px solid rgb(222 181 93 / 42%); border-radius: 48% / 38%; background: radial-gradient(ellipse at 50% 46%, rgb(116 83 39 / 22%), transparent 48%), repeating-linear-gradient(32deg, transparent 0 6px, rgb(255 255 255 / 1.2%) 7px, transparent 8px 14px), linear-gradient(145deg, #111a20, #030506 64%, #100906); box-shadow: inset 0 0 0 0.55rem #16100c, inset 0 0 0 0.7rem #9b672d, inset 0 0 7rem rgb(0 0 0 / 65%), 0 2rem 4rem rgb(0 0 0 / 55%); }
+.table::before { position: absolute; inset: 16%; border: 1px solid rgb(220 181 90 / 20%); border-radius: 50%; background: radial-gradient(ellipse, rgb(221 177 87 / 5%), transparent 68%); content: ""; }
 .players { position: absolute; inset: 0; }
-.player { position: absolute; display: flex; width: 14rem; align-items: center; gap: 0.6rem; padding: 0.65rem 0.75rem; border: 1px solid rgb(255 255 255 / 10%); border-radius: 0.75rem; background: rgb(2 23 20 / 84%); box-shadow: 0 0.8rem 1.4rem rgb(0 0 0 / 24%); }
+.player { position: absolute; display: flex; width: 14rem; align-items: center; gap: 0.6rem; padding: 0.65rem 0.75rem; border: 1px solid rgb(221 179 91 / 20%); border-radius: 0.75rem; background: linear-gradient(135deg, rgb(25 36 42 / 94%), rgb(4 7 9 / 95%)); box-shadow: inset 0 1px rgb(255 239 198 / 5%), 0 0.8rem 1.5rem rgb(0 0 0 / 38%); }
 .player:nth-child(1) { bottom: 1.3rem; left: 50%; transform: translateX(-50%); }
 .player:nth-child(2) { top: 50%; right: 1.3rem; transform: translateY(-50%); }
 .player:nth-child(3) { top: 1.3rem; left: 50%; transform: translateX(-50%); }
 .player:nth-child(4) { top: 50%; left: 1.3rem; transform: translateY(-50%); }
 .eligible { border-color: #ddb85f; box-shadow: 0 0 1.5rem rgb(221 184 95 / 22%); }
-.flipper { border-color: #f0c66d; background: rgb(54 42 17 / 88%); }
+.flipper { border-color: #f0c66d; background: linear-gradient(135deg, rgb(68 48 22 / 94%), rgb(13 9 6 / 96%)); }
 .starter { outline: 2px solid #f0cf82; outline-offset: 3px; }
 .avatar { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; color: #d6b76d; border: 1px solid #9e7b3f; border-radius: 50%; }
 .player > div { display: grid; min-width: 0; }
@@ -56,14 +60,14 @@
 .die .dot::after { background: #4b261e; }
 
 .center { position: relative; z-index: 2; display: grid; width: min(29rem, 46%); place-items: center; gap: 0.8rem; }
-.deck { position: relative; display: grid; width: 7rem; height: 9.2rem; place-items: center; color: #dcb96b; border: 2px solid #a87535; border-radius: 0.7rem; background: repeating-linear-gradient(45deg, #101a1f 0 5px, #152832 5px 10px); box-shadow: 0.45rem 0.45rem 0 #0b1115, 0.7rem 0.7rem 0 #a87535, 0 1.4rem 2rem rgb(0 0 0 / 38%); }
+.deck { position: relative; display: grid; width: 7rem; height: 9.2rem; place-items: center; color: #dcb96b; border: 2px solid #b98a42; border-radius: 0.7rem; background: radial-gradient(circle, transparent 28%, rgb(224 180 91 / 22%) 29% 31%, transparent 32%), linear-gradient(135deg, rgb(255 255 255 / 5%), transparent 34%), repeating-linear-gradient(45deg, #101a20 0 4px, #121d23 4px 8px); box-shadow: inset 0 0 0 3px #080c0f, inset 0 0 0 4px rgb(205 157 77 / 42%), 0.45rem 0.45rem 0 #0b1115, 0.7rem 0.7rem 0 #8c602e, 0 0 2rem rgb(202 145 53 / 15%), 0 1.4rem 2.4rem rgb(0 0 0 / 52%); }
 .deck::before { position: absolute; inset: 0.45rem; border: 1px solid #a87535; content: ""; }
 .deck strong { font-family: var(--font-display); font-size: 2rem; }
 .deck span { position: absolute; bottom: 0.9rem; font-size: 0.55rem; letter-spacing: 0.13em; }
 .deck i { display: none; }
 .revealCard :global(.playing-card) { width: 7rem; height: 9.6rem; opacity: 1; transform: translateY(0); }
 .countTrack { display: flex; max-width: 28rem; flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
-.countTrack span { display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.42rem; color: #c7c9bf; border: 1px solid rgb(255 255 255 / 12%); border-radius: 999px; background: rgb(0 20 17 / 60%); font-size: 0.68rem; }
+.countTrack span { display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.42rem; color: #c7c9bf; border: 1px solid rgb(220 180 96 / 16%); border-radius: 999px; background: rgb(5 8 10 / 76%); font-size: 0.68rem; }
 .countTrack b { color: #e1bd68; }
 .countTrack .finalCount { color: #fff0c4; border-color: #dfb85f; background: #5b421c; }
 .jokerRule { display: flex; align-items: center; gap: 0.7rem; color: #f2d38a; }

@@ -189,6 +189,9 @@ export function OnlineOpening({
               dealKey={`${view.roomCode}-${view.dealStartedAt}`}
               startedAt={view.dealStartedAt}
               startingSeat={view.startingSeat}
+              playerNames={Object.fromEntries(
+                view.players.flatMap((player, seat) => player ? [[seat, player.name]] : []),
+              ) as Partial<Record<Seat, string>>}
               revealedCard={view.revealedCard}
             />
           ) : null}

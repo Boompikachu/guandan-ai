@@ -19,6 +19,7 @@ type RealDealAnimationProps = {
   durationMs?: number;
   dealKey?: string | number;
   startingSeat?: Seat | null;
+  playerNames?: Partial<Record<Seat, string>>;
   revealedCard?: GameCard | null;
   coachMessage?: string;
   onComplete?: () => void;
@@ -44,6 +45,7 @@ export function RealDealAnimation({
   durationMs = REAL_DEAL_DURATION_MS,
   dealKey = "deal",
   startingSeat = null,
+  playerNames = {},
   revealedCard = null,
   coachMessage,
   onComplete,
@@ -81,7 +83,10 @@ export function RealDealAnimation({
   }, [dealKey, durationMs, reducedMotion, startedAt]);
 
   const counts = getDealCounts(dealtCount);
-  const batch = Math.floor(dealtCount / 4);
+  const flightWave = Math.floor(dealtCount / 16);
+  const leaderName = startingSeat === null
+    ? null
+    : playerNames[startingSeat] ?? t("common.player", { number: startingSeat + 1 });
 
   return (
     <section
@@ -104,7 +109,9 @@ export function RealDealAnimation({
           data-authoritative-seat={seat}
         >
           <span>{t("opening.seat", { number: seat + 1 })}</span>
-          <strong>{t("opening.cardsEach", { count: counts[seat] })}</strong>
+          <strong>{playerNames[seat] ?? t("common.player", { number: seat + 1 })}</strong>
+          <small>{t("opening.cardsEach", { count: counts[seat] })}</small>
+          {startingSeat === seat ? <em>{t("opening.leadsRound")}</em> : null}
         </div>
       ))}
 
@@ -112,6 +119,7 @@ export function RealDealAnimation({
         {revealedCard ? (
           <div className={styles.revealed} aria-label={t("opening.starterDetermined")}>
             <Card card={revealedCard} currentLevelRank="2" compact disabled revealed />
+            <span>{t("opening.revealedCard")}</span>
           </div>
         ) : null}
 
@@ -121,18 +129,20 @@ export function RealDealAnimation({
         </div>
 
         {!reducedMotion && dealtCount < REAL_DEAL_TOTAL_CARDS ? (
-          <div className={styles.flights} key={batch} aria-hidden="true">
-            {([0, 1, 2, 3] as const).map((seat) => (
-              <i key={seat} className={styles.flightCard} data-target-seat={seat} />
-            ))}
+          <div className={styles.flights} key={flightWave} aria-hidden="true">
+            {([0, 1, 2, 3] as const).flatMap((seat) => ([0, 1] as const).map((lane) => (
+              <i key={`${seat}-${lane}`} className={styles.flightCard} data-target-seat={seat} data-flight-lane={lane} />
+            )))}
           </div>
         ) : null}
 
         <div className={styles.progress}>
-          <span>{t("opening.dealingDeck")}</span>
+          <span>{t("opening.dealingRound")}</span>
           <strong>{t("opening.dealProgress", { dealt: dealtCount })}</strong>
+          <small>{t("opening.cardsPerPlayer")}</small>
           <i><b style={{ width: `${(dealtCount / REAL_DEAL_TOTAL_CARDS) * 100}%` }} /></i>
-          {coachMessage ? <p>{coachMessage}</p> : null}
+          {leaderName ? <p className={styles.leader}>{t("opening.dealLeader", { name: leaderName })}</p> : null}
+          {coachMessage ? <p className={styles.coachMessage}>{coachMessage}</p> : null}
         </div>
       </div>
     </section>

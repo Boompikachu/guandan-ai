@@ -221,12 +221,12 @@ describe("animated Quick Start tutorial", () => {
     expect("roomCode" in scenario.state).toBe(false);
   });
 
-  it("wires Back Home, focused Play Online, Rules, and Full Guided Match destinations", () => {
+  it("offers Full Round first, then Online, Rules, and Back Home", () => {
     expect(QUICK_START_ROUTES.BACK_HOME).toBe("/");
     expect(QUICK_START_ROUTES.PLAY_ONLINE).toBe("/?play=online#online-play");
     expect(QUICK_START_COMPLETION_ACTIONS).toEqual([
+      "FULL_ROUND",
       "PLAY_ONLINE",
-      "FULL_GUIDED_MATCH",
       "HOW_TO_PLAY",
       "BACK_HOME",
     ]);

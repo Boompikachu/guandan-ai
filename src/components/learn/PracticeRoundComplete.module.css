@@ -1,0 +1,72 @@
+.page {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  overflow-y: auto;
+  color: #ede4d2;
+  background:
+    radial-gradient(circle at 50% 18%, rgb(225 178 88 / 16%), transparent 28rem),
+    radial-gradient(circle at 20% 80%, rgb(25 93 71 / 18%), transparent 24rem),
+    linear-gradient(145deg, #09110f, #030708 58%, #120b07);
+}
+
+.card {
+  width: min(100%, 46rem);
+  padding: clamp(1.35rem, 4vw, 3rem);
+  border: 1px solid rgb(229 188 107 / 43%);
+  border-radius: 1.4rem;
+  text-align: center;
+  background: linear-gradient(145deg, rgb(17 29 28 / 97%), rgb(3 8 9 / 98%));
+  box-shadow: 0 2rem 6rem rgb(0 0 0 / 55%);
+}
+
+.badges { display: flex; justify-content: center; gap: 0.5rem; }
+.badges span { padding: 0.35rem 0.6rem; border: 1px solid rgb(229 188 107 / 28%); border-radius: 999px; color: #cfb470; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { margin: 1.2rem 0 0.3rem; color: #91a39c; font-size: 0.66rem; font-weight: 850; letter-spacing: 0.12em; text-transform: uppercase; }
+.card h1 { margin: 0; color: #f2dca9; font-family: var(--font-display); font-size: clamp(2.5rem, 7vw, 4.8rem); font-weight: 600; line-height: 0.95; }
+
+.doubleDown { display: grid; gap: 0.25rem; margin: 1rem auto 0; padding: 0.75rem; border: 1px solid rgb(224 173 73 / 42%); border-radius: 0.7rem; background: rgb(111 64 18 / 18%); }
+.doubleDown strong { color: #f0c969; font-size: 1rem; letter-spacing: 0.13em; }
+.doubleDown span { color: #cbb88e; font-size: 0.72rem; }
+
+.finishers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45rem; margin: 1.2rem 0 0; padding: 0; list-style: none; }
+.finishers li { display: grid; min-height: 4.3rem; place-items: center; align-content: center; gap: 0.2rem; padding: 0.5rem; border: 1px solid rgb(229 188 107 / 16%); border-radius: 0.65rem; background: rgb(255 255 255 / 2.5%); }
+.finishers b { color: #d7ad56; font-family: var(--font-display); font-size: 1.2rem; }
+.finishers span { color: #e1ddd4; font-size: 0.75rem; font-weight: 800; }
+.remaining { margin: 0.6rem 0 0; color: #899792; font-size: 0.68rem; }
+
+.progression { display: grid; gap: 0.28rem; margin-top: 1.1rem; }
+.progression span { color: #9dd0ad; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.09em; text-transform: uppercase; }
+.progression strong { color: #edce85; font-family: var(--font-display); font-size: 1.6rem; }
+.continueNote { max-width: 35rem; margin: 0.8rem auto 0; color: #8f9d98; font-size: 0.7rem; line-height: 1.45; }
+.actions { display: grid; grid-template-columns: 1.35fr 1fr 0.72fr; gap: 0.55rem; margin-top: 1.2rem; }
+.actions button { min-height: 3rem; padding: 0.55rem 0.8rem; border: 1px solid rgb(229 188 107 / 28%); border-radius: 0.6rem; color: #ddc998; background: linear-gradient(180deg, #152326, #071013); font-weight: 900; cursor: pointer; }
+.actions .primary { color: #171008; border-color: #f0cf82; background: linear-gradient(180deg, #f3d895, #bf8137); }
+
+@media (max-width: 680px) {
+  .finishers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .actions { grid-template-columns: 1fr; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1000px) {
+  .page { padding: 0.3rem max(0.45rem, env(safe-area-inset-right)) 0.3rem max(0.45rem, env(safe-area-inset-left)); }
+  .card { width: min(100%, 52rem); padding: 0.55rem 0.9rem; border-radius: 0.8rem; }
+  .badges span { padding: 0.2rem 0.42rem; font-size: 0.46rem; }
+  .eyebrow { margin-top: 0.4rem; font-size: 0.48rem; }
+  .card h1 { font-size: 1.8rem; }
+  .doubleDown { margin-top: 0.35rem; padding: 0.3rem; }
+  .doubleDown strong { font-size: 0.65rem; }
+  .doubleDown span { font-size: 0.5rem; }
+  .finishers { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; margin-top: 0.45rem; }
+  .finishers li { min-height: 2.2rem; padding: 0.18rem; }
+  .finishers b { font-size: 0.75rem; }
+  .finishers span, .remaining { font-size: 0.5rem; }
+  .progression { margin-top: 0.4rem; }
+  .progression span { font-size: 0.48rem; }
+  .progression strong { font-size: 0.92rem; }
+  .continueNote { margin-top: 0.25rem; font-size: 0.48rem; }
+  .actions { grid-template-columns: 1.35fr 1fr 0.72fr; gap: 0.3rem; margin-top: 0.42rem; }
+  .actions button { min-height: 1.85rem; padding: 0.2rem 0.4rem; font-size: 0.55rem; }
+}

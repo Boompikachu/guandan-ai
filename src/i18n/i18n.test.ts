@@ -51,6 +51,15 @@ describe("i18n", () => {
     expect(translate("zh-CN", "rookie.showDetails")).toBe("展开提示");
   });
 
+  it("localizes Full Round practice entry, completion, and no-rating language", () => {
+    expect(translate("en", "tutorial.fullMatch")).toBe("Play a Full Round");
+    expect(translate("zh-CN", "tutorial.fullMatch")).toBe("完整试玩一轮");
+    expect(translate("en", "practice.noRating")).toBe("No Rating Change");
+    expect(translate("zh-CN", "practice.noRating")).toBe("不影响积分");
+    expect(translate("en", "practice.continue")).toBe("Continue Match");
+    expect(translate("zh-CN", "practice.continue")).toBe("继续比赛");
+  });
+
   it("updates the document language without touching application state", () => {
     const documentElement = { lang: "en" };
     const gameState = { round: 8, selectedCardIds: new Set(["card-1"]) };

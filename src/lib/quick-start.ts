@@ -73,8 +73,8 @@ export type QuickStartControllerEvent =
   | { type: "TEAM_ADVANCE_COMPLETE" };
 
 export const QUICK_START_COMPLETION_ACTIONS = [
+  "FULL_ROUND",
   "PLAY_ONLINE",
-  "FULL_GUIDED_MATCH",
   "HOW_TO_PLAY",
   "BACK_HOME",
 ] as const;

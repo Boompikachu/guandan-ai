@@ -114,8 +114,10 @@
   padding: clamp(0.45rem, 1.2vw, 1rem);
   overflow: auto;
   background:
-    repeating-linear-gradient(93deg, transparent 0 31px, rgb(0 0 0 / 14%) 32px 35px),
-    linear-gradient(135deg, #24160d, #080605 38%, #20120b);
+    radial-gradient(circle at 16% 12%, rgb(46 72 84 / 16%), transparent 28%),
+    radial-gradient(circle at 86% 16%, rgb(170 111 39 / 11%), transparent 25%),
+    repeating-linear-gradient(93deg, transparent 0 31px, rgb(255 255 255 / 1%) 32px 34px),
+    linear-gradient(135deg, #090f14, #020405 54%, #130b07);
 }
 
 .openingTable {
@@ -131,10 +133,15 @@
   border: 1px solid rgb(229 188 107 / 42%);
   border-radius: clamp(1.2rem, 3vw, 3rem);
   background:
-    radial-gradient(ellipse at 50% 42%, rgb(34 118 89 / 34%), transparent 56%),
-    repeating-linear-gradient(30deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 4px),
-    linear-gradient(145deg, #123e33, #06231e 58%, #031410);
-  box-shadow: inset 0 0 0 0.35rem rgb(0 0 0 / 28%), inset 0 0 6rem rgb(0 0 0 / 65%);
+    radial-gradient(ellipse at 50% 42%, rgb(116 83 39 / 21%), transparent 52%),
+    radial-gradient(circle at 18% 18%, rgb(44 69 82 / 14%), transparent 30%),
+    repeating-linear-gradient(30deg, rgb(255 255 255 / 1.3%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #111a20, #030506 62%, #100906);
+  box-shadow:
+    inset 0 0 0 0.35rem rgb(0 0 0 / 42%),
+    inset 0 0 0 0.42rem rgb(193 143 61 / 13%),
+    inset 0 0 7rem rgb(0 0 0 / 72%),
+    0 1.4rem 3rem rgb(0 0 0 / 35%);
 }
 
 .openingCoach {
@@ -181,7 +188,8 @@
   padding: 0.7rem;
   border: 1px solid rgb(229 188 107 / 18%);
   border-radius: 0.8rem;
-  background: rgb(2 17 15 / 78%);
+  background: linear-gradient(135deg, rgb(24 34 40 / 92%), rgb(4 7 9 / 94%));
+  box-shadow: inset 0 1px rgb(255 239 198 / 5%), 0 0.5rem 1rem rgb(0 0 0 / 22%);
   transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
@@ -271,10 +279,11 @@
   border: 2px solid #bd934d;
   border-radius: 0.55rem;
   background:
-    radial-gradient(circle, transparent 32%, rgb(222 180 92 / 18%) 33% 35%, transparent 36%),
-    repeating-linear-gradient(45deg, rgb(229 188 107 / 8%) 0 3px, transparent 3px 7px),
-    #10191d;
-  box-shadow: 0 0.55rem 1rem rgb(0 0 0 / 40%);
+    radial-gradient(circle, transparent 29%, rgb(222 180 92 / 24%) 30% 32%, transparent 33%),
+    linear-gradient(135deg, rgb(255 255 255 / 5%), transparent 34%),
+    repeating-linear-gradient(45deg, rgb(229 188 107 / 7%) 0 3px, transparent 3px 7px),
+    linear-gradient(145deg, #17232a, #070a0c 72%);
+  box-shadow: inset 0 0 0 2px #0a0e11, inset 0 0 0 3px rgb(205 157 76 / 32%), 0 0 1.5rem rgb(207 151 59 / 12%), 0 0.8rem 1.4rem rgb(0 0 0 / 52%);
 }
 
 .pendingDeck i:nth-child(1) { transform: translate(-0.34rem, -0.25rem) rotate(-3deg); }
@@ -385,7 +394,7 @@
 .steps b { color: #b98b43; font-family: var(--font-display); font-size: 1.6rem; }
 .steps strong { margin-top: 0.6rem; color: #e9d7ae; font-size: 0.82rem; }
 .steps span { margin-top: 0.35rem; color: #879491; font-size: 0.7rem; line-height: 1.45; }
-.learningModes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin-top: 2rem; }
+.learningModes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin-top: 2rem; }
 .learningModes article { position: relative; display: grid; min-height: 13rem; align-content: start; padding: 1.25rem; overflow: hidden; border: 1px solid rgb(229 188 107 / 22%); border-radius: 1rem; background: linear-gradient(145deg, rgb(255 255 255 / 4%), rgb(0 0 0 / 12%)); }
 .learningModes article > span { color: #a68e61; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.11em; text-transform: uppercase; }
 .learningModes h2 { margin: 0.55rem 0 0; color: #edd8aa; font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.45rem); }
@@ -393,13 +402,18 @@
 .learningModes button { align-self: end; justify-self: start; min-height: 2.7rem; margin-top: auto; padding: 0.5rem 0.9rem; border: 1px solid rgb(229 188 107 / 34%); border-radius: 0.55rem; color: #e0c88f; background: rgb(229 188 107 / 6%); font-weight: 850; cursor: pointer; }
 .learningModes .recommendedMode { border-color: rgb(229 188 107 / 58%); background: radial-gradient(circle at 85% 10%, rgb(229 188 107 / 15%), transparent 44%), linear-gradient(145deg, rgb(24 48 42 / 92%), rgb(5 14 14 / 96%)); box-shadow: 0 0 2rem rgb(229 188 107 / 8%); }
 .learningModes .recommendedMode button { color: #171108; border-color: #efd08a; background: linear-gradient(180deg, #f0d38e, #bd8337); }
+.learningModes .practiceMode { border-color: rgb(98 177 133 / 42%); background: radial-gradient(circle at 86% 8%, rgb(69 159 111 / 13%), transparent 44%), linear-gradient(145deg, rgb(14 35 31 / 94%), rgb(3 12 13 / 96%)); }
+.learningModes .practiceMode button { color: #e9d39f; border-color: rgb(229 188 107 / 52%); background: linear-gradient(180deg, #24332f, #0a1716); }
 .onboardingActions { display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1.5rem; }
 .onboardingActions button { min-height: 3rem; padding: 0.6rem 1.1rem; border: 1px solid rgb(229 188 107 / 30%); border-radius: 0.6rem; color: #ddc590; background: rgb(255 255 255 / 3%); font-weight: 850; }
 .onboardingActions .start { color: #171108; border-color: #efd08a; background: linear-gradient(180deg, #f0d38e, #bd8337); }
 
+@media (max-width: 900px) {
+  .learningModes { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 760px) {
   .steps { grid-template-columns: 1fr; }
-  .learningModes { grid-template-columns: 1fr; }
   .learningModes article { min-height: 11rem; }
   .steps article { min-height: auto; }
   .onboarding { align-items: start; overflow-y: auto; }

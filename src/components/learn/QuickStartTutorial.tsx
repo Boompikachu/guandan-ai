@@ -116,11 +116,11 @@ function useReducedMotion(): boolean {
 }
 
 export function QuickStartTutorial({
-  onFullGuidedMatch,
+  onFullRound,
   onOpenRules,
   onSkip,
 }: {
-  onFullGuidedMatch: () => void;
+  onFullRound: () => void;
   onOpenRules: () => void;
   onSkip: () => void;
 }) {
@@ -306,9 +306,9 @@ export function QuickStartTutorial({
             {essentials.map((key) => <span key={key}><b aria-hidden="true">✓</b>{t(key)}</span>)}
           </div>
           <div className={styles.completionActions}>
-            <button type="button" className={styles.primary} onClick={() => router.push(QUICK_START_ROUTES.PLAY_ONLINE)}>{t("home.playOnline")}</button>
-            <button type="button" onClick={onFullGuidedMatch}>{t("tutorial.fullMatch")}</button>
-            <button type="button" onClick={onOpenRules}>{t("common.rules")}</button>
+            <button type="button" className={styles.primary} onClick={onFullRound}>{t("tutorial.fullMatch")}</button>
+            <button type="button" onClick={() => router.push(QUICK_START_ROUTES.PLAY_ONLINE)}>{t("home.playOnline")}</button>
+            <button type="button" onClick={onOpenRules}>{t("tutorial.rulesMode")}</button>
           </div>
           <button type="button" className={styles.backHome} onClick={() => router.push(QUICK_START_ROUTES.BACK_HOME)}>← {t("quick.complete.backHome")}</button>
         </section>
